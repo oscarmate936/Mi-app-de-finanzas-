@@ -7,45 +7,46 @@ import uuid
 # --- CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(page_title="Cash Book Pro", page_icon="💰", layout="centered")
 
-# --- ESTILOS CSS (REDISEÑO FINTECH) ---
+# --- ESTILOS CSS (REDISEÑO FINTECH IDÉNTICO A IMAGEN) ---
 st.markdown("""
 <style>
     header {visibility: hidden;}
     footer {visibility: hidden;}
     [data-testid="stAppViewContainer"] { background-color: #f8f9fa; }
     
-    /* 1. Tarjeta de Salario (Botón Superior) */
-    .stButton > button.salary-btn {
+    /* 1. Tarjeta de Salario (Botón Superior Estilo Card) */
+    .stButton > button[kind="secondary"] {
         background: linear-gradient(135deg, #0d1e3a, #1a3a5f) !important;
         color: white !important;
         border-radius: 18px !important;
         border: none !important;
-        padding: 25px !important;
-        height: auto !important;
+        padding: 30px 20px !important;
+        height: 160px !important;
         text-align: left !important;
         box-shadow: 0 4px 15px rgba(0,0,0,0.2) !important;
     }
 
-    /* 2, 3 y 4. Tarjetas de Resumen */
+    /* 2, 3. Tarjetas de Resumen Blancas */
     .stat-card {
         background: white;
         padding: 15px;
         border-radius: 15px;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
         border: 1px solid #f0f0f0;
-        text-align: left;
+        height: 100px;
     }
     .stat-label { font-size: 13px; color: #6c757d; font-weight: 500; }
-    .stat-value { font-size: 22px; font-weight: 700; color: #333; margin: 5px 0; }
+    .stat-value { font-size: 20px; font-weight: 700; color: #333; margin-top: 5px; }
     
     /* 4. Tarjeta Azul de Saldo Actual */
     .delta-card {
         background: #007bff;
         color: white;
-        padding: 20px;
+        padding: 25px;
         border-radius: 20px;
         box-shadow: 0 4px 15px rgba(0, 123, 255, 0.3);
         margin: 20px 0;
+        text-align: left;
     }
 
     /* 5. Transacciones Recientes */
@@ -53,7 +54,7 @@ st.markdown("""
         background: white;
         padding: 15px;
         border-radius: 12px;
-        margin-bottom: 10px;
+        margin-bottom: 8px;
         display: flex;
         justify-content: space-between;
         align-items: center;
@@ -61,40 +62,31 @@ st.markdown("""
     }
     .trans-info { display: flex; align-items: center; gap: 12px; }
     .trans-icon { 
-        width: 40px; height: 40px; border-radius: 50%; 
-        display: flex; align-items: center; justify-content: center; font-size: 18px;
+        width: 35px; height: 35px; border-radius: 50%; 
+        display: flex; align-items: center; justify-content: center; font-size: 16px;
     }
-    .trans-text { display: flex; flex-direction: column; }
-    .trans-cat { font-weight: 700; color: #333; font-size: 15px; }
-    .trans-note { font-size: 12px; color: #999; }
-    .trans-amount { text-align: right; }
-    .amount-val { font-weight: 700; font-size: 16px; }
-    .amount-date { font-size: 11px; color: #bbb; }
+    .trans-cat { font-weight: 700; color: #333; font-size: 14px; }
+    .trans-note { font-size: 12px; color: #999; display: block; }
+    .amount-val { font-weight: 700; font-size: 15px; }
 
     /* 6 y 7. Botones Inferiores */
-    .bottom-bar {
-        position: fixed;
-        bottom: 20px;
-        left: 0;
-        right: 0;
-        padding: 0 20px;
-        display: flex;
-        gap: 15px;
-        z-index: 99;
-    }
-    .stButton > button.ingreso-btn {
-        background-color: #28a745 !important;
-        color: white !important;
-        border-radius: 12px !important;
-        height: 55px !important;
-        font-weight: 700 !important;
-    }
-    .stButton > button.gasto-btn {
+    .stButton > button[kind="primary"] { /* GASTOS */
         background-color: #ff3b30 !important;
         color: white !important;
         border-radius: 12px !important;
         height: 55px !important;
         font-weight: 700 !important;
+        border: none !important;
+    }
+    /* El botón de ingresos lo manejaremos con una columna custom */
+    .green-btn {
+        background-color: #28a745 !important;
+        color: white !important;
+        border-radius: 12px !important;
+        height: 55px !important;
+        width: 100% !important;
+        font-weight: 700 !important;
+        border: none !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -114,8 +106,18 @@ def get_db():
     try:
         res = requests.get(URL, headers={"X-Master-Key": API_KEY})
         data = res.json().get('record', {})
+        
+        # --- SOLUCIÓN AL KEYERROR (REPARACIÓN AUTOMÁTICA) ---
+        default_settings = {"sueldo": 0.0, "pago": "---"}
+        if "settings" not in data:
+            data["settings"] = default_settings
+        else:
+            # Si settings existe pero le faltan llaves, las agregamos
+            for k, v in default_settings.items():
+                if k not in data["settings"]:
+                    data["settings"][k] = v
+                    
         if "transactions" not in data: data["transactions"] = []
-        if "settings" not in data: data["settings"] = {"sueldo": 0.0, "pago": "---"}
         return data
     except:
         return {"transactions": [], "settings": {"sueldo": 0.0, "pago": "---"}}
@@ -134,7 +136,7 @@ else:
     df['date_dt'] = pd.to_datetime(df['date'])
     df['amount'] = pd.to_numeric(df['amount']).fillna(0.0)
 
-# Cálculos
+# Datos Mes Actual
 mes_actual = datetime.now().month
 df_mes = df[df['date_dt'].dt.month == mes_actual] if not df.empty else df
 
@@ -143,25 +145,23 @@ ingresos_mes = df_mes[df_mes['type'] == 'Ingreso']['amount'].sum()
 gastos_mes = df_mes[df_mes['type'] == 'Gasto']['amount'].sum()
 delta_mes = ingresos_mes - gastos_mes
 
-# Saldo Final (Sueldo + Todos los Ingresos - Todos los Gastos)
-total_ingresos = df[df['type'] == 'Ingreso']['amount'].sum()
-total_gastos = df[df['type'] == 'Gasto']['amount'].sum()
-saldo_final = sueldo_base + total_ingresos - total_gastos
+# Saldo Final Acumulado
+saldo_final = sueldo_base + df[df['type']=='Ingreso']['amount'].sum() - df[df['type']=='Gasto']['amount'].sum()
 
-# --- DIÁLOGOS DE ENTRADA ---
-@st.dialog("🎯 Configurar Sueldo")
+# --- DIÁLOGOS ---
+@st.dialog("🎯 Editar Sueldo")
 def sueldo_dialog():
-    s = st.number_input("Monto del pago fijo", value=sueldo_base)
+    s = st.number_input("Monto fijo", value=sueldo_base)
     f = st.date_input("Fecha de pago")
-    if st.button("Guardar Configuración", use_container_width=True):
+    if st.button("Actualizar", use_container_width=True):
         db["settings"]["sueldo"] = s
         db["settings"]["pago"] = f.strftime("%d %b")
         save_db(db); st.rerun()
 
 @st.dialog("🟢 Nuevo Ingreso")
 def ingreso_dialog():
-    amt = st.number_input("Monto ($)", min_value=0.0, step=1.0)
-    if st.button("Confirmar Ingreso", use_container_width=True):
+    amt = st.number_input("Monto ($)", min_value=0.0)
+    if st.button("Guardar", use_container_width=True):
         db["transactions"].append({
             "id": str(uuid.uuid4())[:8], "date": datetime.now().strftime("%Y-%m-%d"),
             "type": "Ingreso", "category": "Ingreso Extra", "amount": amt, "note": "Ingreso adicional"
@@ -171,89 +171,72 @@ def ingreso_dialog():
 @st.dialog("🔴 Registrar Gasto")
 def gasto_dialog():
     cat = st.selectbox("Categoría", ["Entertainment", "Comida", "Transporte", "Servicios", "Otros"])
-    amt = st.number_input("Monto ($)", min_value=0.0, step=1.0)
-    note = st.text_input("Breve descripción")
-    if st.button("Registrar Gasto", use_container_width=True):
+    amt = st.number_input("Monto ($)", min_value=0.0)
+    note = st.text_input("Descripción")
+    if st.button("Registrar", use_container_width=True):
         db["transactions"].append({
             "id": str(uuid.uuid4())[:8], "date": datetime.now().strftime("%Y-%m-%d"),
             "type": "Gasto", "category": cat, "amount": amt, "note": note
         })
         save_db(db); st.rerun()
 
-# --- INTERFAZ ---
+# --- INTERFAZ (ORDEN SEGÚN IMAGEN) ---
 
-# 1. Tarjeta de Salario (Botón)
-if st.button(f"💳 {db['settings']['pago']} \n\n SALARIO: ${sueldo_base:,.2f}", key="btn_1", help="Toca para editar tu sueldo", use_container_width=True):
+# 1. Botón Salario (Tarjeta)
+pago_txt = db["settings"].get("pago", "---")
+if st.button(f"💳 {pago_txt} \n\n SALARIO: ${sueldo_base:,.2f}", key="btn_salary", use_container_width=True, kind="secondary"):
     sueldo_dialog()
 
-# 2 y 3. Fila de Ingresos y Gastos del mes
+# 2 y 3. Fila de Mosaicos (Ingresos y Gastos del mes)
 st.write("")
-c2, c3 = st.columns(2)
-with c2:
-    st.markdown(f"""<div class="stat-card">
-        <div class="stat-label">↓ Ingresos</div>
-        <div class="stat-value">${ingresos_mes:,.2f}</div>
-        <div class="stat-label">Este Mes</div>
-    </div>""", unsafe_allow_html=True)
+col_ing, col_gas = st.columns(2)
+with col_ing:
+    st.markdown(f'<div class="stat-card"><div class="stat-label">↓ Ingresos</div><div class="stat-value">${ingresos_mes:,.2f}</div><div class="stat-label">Este Mes</div></div>', unsafe_allow_html=True)
+with col_gas:
+    st.markdown(f'<div class="stat-card"><div class="stat-label">↑ Gastos</div><div class="stat-value">${gastos_mes:,.2f}</div><div class="stat-label">Este Mes</div></div>', unsafe_allow_html=True)
 
-with c3:
-    st.markdown(f"""<div class="stat-card">
-        <div class="stat-label">↑ Gastos</div>
-        <div class="stat-value">${gastos_mes:,.2f}</div>
-        <div class="stat-label">Este Mes</div>
-    </div>""", unsafe_allow_html=True)
-
-# 4. Saldo Actual (Delta del mes)
-color_delta = "#28a745" if delta_mes >= 0 else "#ff3b30"
+# 4. Saldo Actual (Azul)
+color_delta = "#ffffff"
 st.markdown(f"""<div class="delta-card">
     <div style="font-size:14px; opacity:0.8">Saldo Actual (Mes)</div>
-    <div style="font-size:36px; font-weight:bold; color:white">
-        {'+' if delta_mes >= 0 else ''}${delta_mes:,.2f}
-    </div>
+    <div style="font-size:36px; font-weight:bold">${delta_mes:,.2f}</div>
 </div>""", unsafe_allow_html=True)
 
-# 5. Transacciones Recientes
+# 5. Lista de Transacciones con Borrado
 st.write("### Transacciones Recientes")
 if not df.empty:
-    for idx, row in df.sort_values('date', ascending=False).iterrows():
-        color_icon = "#e8f5e9" if row['type'] == 'Ingreso' else "#ffebee"
-        color_arrow = "#28a745" if row['type'] == 'Ingreso' else "#ff3b30"
-        symbol = "+" if row['type'] == 'Ingreso' else "-"
+    for _, row in df.sort_values('date', ascending=False).iterrows():
+        c_icon = "#e8f5e9" if row['type'] == 'Ingreso' else "#ffebee"
+        c_txt = "#28a745" if row['type'] == 'Ingreso' else "#ff3b30"
         
-        # Item de la lista
+        # Estructura de item
         st.markdown(f"""
         <div class="trans-item">
             <div class="trans-info">
-                <div class="trans-icon" style="background:{color_icon}; color:{color_arrow}">
-                    {'↓' if row['type'] == 'Ingreso' else '↑'}
-                </div>
-                <div class="trans-text">
-                    <span class="trans-cat">{row['category']}</span>
-                    <span class="trans-note">{row['note']}</span>
-                </div>
+                <div class="trans-icon" style="background:{c_icon}; color:{c_txt}">{'↓' if row['type'] == 'Ingreso' else '↑'}</div>
+                <div class="trans-text"><span class="trans-cat">{row['category']}</span><span class="trans-note">{row['note']}</span></div>
             </div>
-            <div class="trans-amount">
-                <span class="amount-val" style="color:{color_arrow}">{symbol}${row['amount']:,.2f}</span><br>
-                <span class="amount-date">{row['date']}</span>
+            <div style="text-align:right">
+                <div class="amount-val" style="color:{c_txt}">{'+' if row['type'] == 'Ingreso' else '-'}${row['amount']:,.2f}</div>
+                <div style="font-size:10px; color:#ccc">{row['date']}</div>
             </div>
         </div>
         """, unsafe_allow_html=True)
-        # Botón de borrar pequeño para cada una
-        if st.button(f"Eliminar {row['id']}", key=f"del_{row['id']}"):
+        # Botón de borrar integrado
+        if st.button("🗑️ Borrar", key=f"del_{row['id']}", use_container_width=True):
             db["transactions"] = [t for t in db["transactions"] if t["id"] != row['id']]
             save_db(db); st.rerun()
 
-# Mostrar Saldo Final Total al final de la lista
-st.success(f"**TOTAL DISPONIBLE (Sueldo + Neto): ${saldo_final:,.2f}**")
+# Resumen Final (Sueldo + Neto)
+st.divider()
+st.success(f"**TOTAL NETO DISPONIBLE: ${saldo_final:,.2f}**")
 
-# Espacio para que el scroll no tape el contenido con los botones fijos
-st.write("<br><br><br><br>", unsafe_allow_html=True)
-
-# 6 y 7. Botones Inferiores Fijos
-col6, col7 = st.columns(2)
-with col6:
-    if st.button("↓ Ingresos", key="btn_6", type="secondary", use_container_width=True):
+# 6 y 7. Botones Inferiores (Flotantes visualmente)
+st.write("<br><br>", unsafe_allow_html=True)
+c6, c7 = st.columns(2)
+with c6:
+    if st.button("↓ Ingresos", key="btn_ing", use_container_width=True):
         ingreso_dialog()
-with col7:
-    if st.button("↑ Gastos", key="btn_7", type="primary", use_container_width=True):
+with c7:
+    if st.button("↑ Gastos", key="btn_gas", use_container_width=True, type="primary"):
         gasto_dialog()
