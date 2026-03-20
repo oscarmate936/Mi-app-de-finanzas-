@@ -1,8 +1,8 @@
 import streamlit as st
-from utils.db_manager import init_db, get_transacciones
 import pandas as pd
+# Importación directa ahora que el archivo está al lado
+from db_manager import init_db, get_transacciones
 
-# Configuración de la página (DEBE ser el primer comando de Streamlit)
 st.set_page_config(
     page_title="Gestor Financiero Pro",
     page_icon="💼",
@@ -10,17 +10,14 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Inicializar la base de datos
 init_db()
 
 st.title("🏠 Dashboard Principal")
 st.markdown("Bienvenido a tu resumen financiero.")
 st.divider()
 
-# Obtener datos
 df = get_transacciones()
 
-# Calcular métricas básicas
 if not df.empty:
     ingresos = df[df['tipo'] == 'Ingreso']['monto'].sum()
     gastos = df[df['tipo'] == 'Gasto']['monto'].sum()
@@ -28,7 +25,6 @@ if not df.empty:
 else:
     ingresos, gastos, saldo_actual = 0.0, 0.0, 0.0
 
-# --- SECCIÓN DE MÉTRICAS ---
 col1, col2, col3 = st.columns(3)
 
 with col1:
@@ -40,14 +36,8 @@ with col3:
 
 st.divider()
 
-# --- SECCIÓN DE VISTA PREVIA ---
 st.subheader("Últimos Movimientos")
 if df.empty:
     st.info("Aún no tienes movimientos registrados. Ve a la sección 'Movimientos' para empezar.")
 else:
-    # Mostramos solo los últimos 5 movimientos para no saturar el Dashboard
-    st.dataframe(
-        df.head(5),
-        use_container_width=True,
-        hide_index=True
-    )
+    st.dataframe(df.head(5), use_container_width=True, hide_index=True)
