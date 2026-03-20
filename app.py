@@ -7,88 +7,116 @@ import uuid
 # --- CONFIGURACIÓN ---
 st.set_page_config(page_title="Vault Premium", page_icon="💎", layout="centered")
 
-# --- ESTILOS CSS (DISEÑO PREMIUM ASIMÉTRICO Y NEO-BENTO) ---
+# --- REDISEÑO ULTRA-PREMIUM (CSS) ---
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;800&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap');
     
-    /* Configuración Base */
-    header {visibility: hidden;}
-    footer {visibility: hidden;}
+    /* Global Styles */
     [data-testid="stAppViewContainer"] {
-        background-color: #0A0C10;
-        font-family: 'Plus Jakarta Sans', sans-serif;
-        color: #E2E8F0;
+        background: radial-gradient(circle at top right, #0F172A, #020617);
+        font-family: 'Outfit', sans-serif;
+        color: #F8FAFC;
     }
-    .main .block-container { padding-top: 2rem; max-width: 500px; }
+    header, footer {visibility: hidden;}
+    .main .block-container { padding-top: 1.5rem; max-width: 480px; }
 
-    /* 1. Tarjeta de Balance Principal (Asimétrica) */
-    .balance-card {
-        background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%);
-        padding: 35px 25px;
-        border-radius: 20px 80px 20px 20px; /* Bordes asimétricos */
-        border: 1px solid rgba(255,255,255,0.1);
-        margin-bottom: 25px;
-        box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
+    /* 1. Glass Card - Balance */
+    .premium-card {
+        background: linear-gradient(145deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.8));
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 32px;
+        padding: 40px 30px;
+        text-align: center;
+        margin-bottom: 30px;
+        box-shadow: 0 20px 40px rgba(0,0,0,0.4);
     }
-    .balance-label { font-size: 13px; text-transform: uppercase; letter-spacing: 2px; color: #94A3B8; margin-bottom: 5px; }
-    .balance-val { font-size: 42px; font-weight: 800; color: #F8FAFC; letter-spacing: -1px; }
-
-    /* 2. Stats Bento (Tamaños desiguales) */
-    .stat-card {
-        background: #161B22;
-        padding: 20px;
-        border: 1px solid rgba(255,255,255,0.05);
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
+    .balance-label { 
+        font-size: 11px; 
+        text-transform: uppercase; 
+        letter-spacing: 4px; 
+        color: #94A3B8; 
+        margin-bottom: 8px;
     }
-    .inc-card { border-radius: 40px 15px 15px 15px; border-top: 3px solid #10B981; }
-    .exp-card { border-radius: 15px 15px 40px 15px; border-bottom: 3px solid #F43F5E; }
-    
-    .stat-title { font-size: 12px; font-weight: 600; color: #64748B; text-transform: uppercase; }
-    .stat-amt { font-size: 20px; font-weight: 700; margin-top: 10px; }
+    .balance-val { 
+        font-size: 52px; 
+        font-weight: 800; 
+        background: linear-gradient(to right, #F8FAFC, #94A3B8);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        letter-spacing: -2px;
+    }
 
-    /* 3. Lista de Transacciones */
-    .trans-box {
-        background: rgba(255, 255, 255, 0.02);
+    /* 2. Bento Grid Stats */
+    .bento-container {
+        display: grid;
+        grid-template-columns: 1fr 1.2fr;
+        gap: 15px;
+        margin-bottom: 30px;
+    }
+    .bento-item {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.05);
         border-radius: 24px;
-        padding: 10px;
-        margin-top: 20px;
+        padding: 20px;
+        transition: transform 0.3s ease;
     }
-    .trans-row {
+    .bento-item:hover {
+        transform: translateY(-5px);
+        background: rgba(255, 255, 255, 0.05);
+    }
+    .stat-n { font-size: 22px; font-weight: 700; margin-top: 5px; }
+    .stat-t { font-size: 10px; font-weight: 600; color: #64748B; text-transform: uppercase; letter-spacing: 1px; }
+
+    /* 3. Botones Neomorfistas */
+    div.stButton > button {
+        border-radius: 20px !important;
+        padding: 20px !important;
+        font-weight: 600 !important;
+        letter-spacing: 1px !important;
+        border: none !important;
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+    }
+    button[key="btn_ingreso"] {
+        background: #F8FAFC !important;
+        color: #020617 !important;
+    }
+    button[key="btn_gasto"] {
+        background: rgba(244, 63, 94, 0.15) !important;
+        color: #FB7185 !important;
+        border: 1px solid rgba(244, 63, 94, 0.2) !important;
+    }
+    button[key="btn_sueldo"] {
+        background: transparent !important;
+        color: #64748B !important;
+        border: 1px solid rgba(148, 163, 184, 0.1) !important;
+        margin-top: 20px !important;
+    }
+
+    /* 4. Transaction Feed */
+    .feed-container { margin-top: 40px; }
+    .transaction-item {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 15px;
-        border-bottom: 1px solid rgba(255,255,255,0.05);
+        padding: 18px;
+        background: rgba(255, 255, 255, 0.02);
+        border-radius: 20px;
+        margin-bottom: 12px;
+        border-left: 4px solid transparent;
     }
-    .cat-badge {
-        background: #1E293B;
-        padding: 4px 10px;
-        border-radius: 8px;
-        font-size: 11px;
-        font-weight: 600;
-        color: #94A3B8;
-    }
+    .tx-inc { border-left-color: #10B981; }
+    .tx-exp { border-left-color: #F43F5E; }
     
-    /* Botones Custom */
-    div.stButton > button {
-        border-radius: 18px !important;
-        font-weight: 700 !important;
-        transition: all 0.3s ease !important;
-        border: none !important;
-    }
-    /* Botón Ingreso */
-    button[key="btn_ingreso"] { background: #10B981 !important; color: white !important; height: 60px !important; }
-    /* Botón Gasto */
-    button[key="btn_gasto"] { background: #F43F5E !important; color: white !important; height: 60px !important; }
-    /* Botón Sueldo */
-    button[key="btn_sueldo"] { background: #334155 !important; color: #94A3B8 !important; font-size: 12px !important; }
+    .tx-info { display: flex; flex-direction: column; }
+    .tx-cat { font-size: 9px; font-weight: 800; text-transform: uppercase; color: #475569; }
+    .tx-note { font-size: 15px; font-weight: 500; color: #E2E8F0; }
+    .tx-amt { font-size: 16px; font-weight: 700; }
 </style>
 """, unsafe_allow_html=True)
 
-# --- BACKEND (Respetando tu lógica original) ---
+# --- BACKEND (Sin cambios en tu lógica) ---
 try:
     BIN_ID = st.secrets["bin_id"]
     API_KEY = st.secrets["api_key"]
@@ -123,16 +151,15 @@ if not df.empty:
 else:
     df_mes = pd.DataFrame(columns=["amount", "type"])
 
-# Cálculos
 sueldo_base = db["settings"].get("sueldo", 0.0)
 ingresos_mes = df_mes[df_mes['type'] == 'Ingreso']['amount'].sum()
 gastos_mes = df_mes[df_mes['type'] == 'Gasto']['amount'].sum()
 saldo_total = sueldo_base + (df[df['type']=='Ingreso']['amount'].sum() if not df.empty else 0) - (df[df['type']=='Gasto']['amount'].sum() if not df.empty else 0)
 
-# --- DIÁLOGOS (ENTRADAS) ---
+# --- DIÁLOGOS ---
 @st.dialog("🎯 Definir Presupuesto")
 def sueldo_dialog():
-    s = st.number_input("Salario base inicial", value=sueldo_base, help="Este monto se suma al balance total.")
+    s = st.number_input("Salario base inicial", value=sueldo_base)
     if st.button("Actualizar Bóveda", use_container_width=True):
         db["settings"]["sueldo"] = s
         save_db(db); st.rerun()
@@ -140,7 +167,7 @@ def sueldo_dialog():
 @st.dialog("🚀 Nuevo Ingreso")
 def ingreso_dialog():
     amt = st.number_input("Monto del ingreso ($)", min_value=0.0)
-    note = st.text_input("¿De qué se trata?", placeholder="Ej: Venta de garage")
+    note = st.text_input("Concepto")
     if st.button("Inyectar Capital", use_container_width=True):
         db["transactions"].append({
             "id": str(uuid.uuid4())[:6], "date": datetime.now().strftime("%Y-%m-%d"),
@@ -152,7 +179,7 @@ def ingreso_dialog():
 def gasto_dialog():
     cat = st.selectbox("Categoría", ["🍔 Comida", "🎬 Ocio", "🚗 Transporte", "🏠 Hogar", "💡 Servicios", "🌀 Otros"])
     amt = st.number_input("Monto gastado ($)", min_value=0.0)
-    note = st.text_input("Nota breve", placeholder="Ej: Cena con amigos")
+    note = st.text_input("Nota")
     if st.button("Confirmar Gasto", use_container_width=True):
         db["transactions"].append({
             "id": str(uuid.uuid4())[:6], "date": datetime.now().strftime("%Y-%m-%d"),
@@ -160,41 +187,34 @@ def gasto_dialog():
         })
         save_db(db); st.rerun()
 
-# --- INTERFAZ VISUAL ---
+# --- INTERFAZ ---
 
-# 1. BALANCE PRINCIPAL (Asimétrico)
+# Header Balance
 st.markdown(f"""
-<div class="balance-card">
-    <div class="balance-label">Disponible Total</div>
+<div class="premium-card">
+    <div class="balance-label">Total Balance</div>
     <div class="balance-val">${saldo_total:,.2f}</div>
-    <div style="color:#10B981; font-size:12px; font-weight:600; margin-top:10px;">
-        ⚡ Bóveda Activa
+    <div style="margin-top:15px; font-size:10px; color:#10B981; letter-spacing:2px; font-weight:800;">
+        <span style="opacity:0.5;">●</span> VAULT SECURED
     </div>
 </div>
 """, unsafe_allow_html=True)
 
-# 2. STATS ASIMÉTRICOS (Columna 1:2)
-col_left, col_right = st.columns([1, 1.5])
-
-with col_left:
-    st.markdown(f"""
-    <div class="stat-card inc-card">
-        <div class="stat-title">Ingresos</div>
-        <div class="stat-amt" style="color:#10B981;">+${ingresos_mes:,.0f}</div>
+# Bento Stats
+st.markdown(f"""
+<div class="bento-container">
+    <div class="bento-item">
+        <div class="stat-t">Mensual In</div>
+        <div class="stat-n" style="color:#10B981;">+${ingresos_mes:,.0f}</div>
     </div>
-    """, unsafe_allow_html=True)
-
-with col_right:
-    st.markdown(f"""
-    <div class="stat-card exp-card">
-        <div class="stat-title">Gastos del Mes</div>
-        <div class="stat-amt" style="color:#F43F5E;">-${gastos_mes:,.0f}</div>
+    <div class="bento-item">
+        <div class="stat-t">Mensual Out</div>
+        <div class="stat-n" style="color:#F43F5E;">-${gastos_mes:,.0f}</div>
     </div>
-    """, unsafe_allow_html=True)
+</div>
+""", unsafe_allow_html=True)
 
-st.write("<br>", unsafe_allow_html=True)
-
-# 3. BOTONES DE ACCIÓN (Todos son botones que abren diálogos)
+# Actions
 c1, c2 = st.columns(2)
 with c1:
     if st.button("✚ INGRESO", key="btn_ingreso", use_container_width=True):
@@ -203,43 +223,42 @@ with c2:
     if st.button("➖ GASTO", key="btn_gasto", use_container_width=True):
         gasto_dialog()
 
-if st.button("⚙️ CONFIGURAR SALARIO BASE", key="btn_sueldo", use_container_width=True):
-    sueldo_dialog()
-
-# 4. HISTORIAL PREMIUM
-st.markdown("<h3 style='font-size:18px; margin-top:30px;'>Movimientos Recientes</h3>", unsafe_allow_html=True)
+# Transactions
+st.markdown("<div class='feed-container'><p style='font-size:12px; font-weight:800; color:#475569; letter-spacing:1px; margin-bottom:20px;'>RECUPERANDO ACTIVIDAD</p>", unsafe_allow_html=True)
 
 if not df.empty:
-    st.markdown('<div class="trans-box">', unsafe_allow_html=True)
-    for _, row in df.sort_values('date', ascending=False).head(10).iterrows():
+    for _, row in df.sort_values('date', ascending=False).head(8).iterrows():
         is_inc = row['type'] == 'Ingreso'
+        clase = "tx-inc" if is_inc else "tx-exp"
+        simbolo = "+" if is_inc else "-"
         color = "#10B981" if is_inc else "#F43F5E"
-        prefix = "+" if is_inc else "-"
         
         st.markdown(f"""
-        <div class="trans-row">
-            <div>
-                <span class="cat-badge">{row['category']}</span>
-                <div style="font-size:14px; font-weight:600; margin-top:4px;">{row['note']}</div>
-                <div style="font-size:10px; color:#475569;">{row['date']}</div>
+        <div class="transaction-item {clase}">
+            <div class="tx-info">
+                <span class="tx-cat">{row['category']}</span>
+                <span class="tx-note">{row['note']}</span>
             </div>
-            <div style="text-align:right;">
-                <div style="color:{color}; font-weight:800; font-size:16px;">{prefix}${row['amount']:,.2f}</div>
+            <div style="text-align:right">
+                <div class="tx-amt" style="color:{color}">{simbolo}${row['amount']:,.2f}</div>
+                <div style="font-size:9px; color:#475569;">{row['date']}</div>
             </div>
         </div>
         """, unsafe_allow_html=True)
         
-        # Botón de eliminar (Mantenido por lógica)
-        if st.button(f"🗑️", key=f"del_{row['id']}", help="Eliminar registro"):
+        # El botón de borrar se mantiene funcional pero discreto
+        if st.button(f"Eliminar {row['id']}", key=f"del_{row['id']}", help="Remover"):
             db["transactions"] = [t for t in db["transactions"] if t["id"] != row['id']]
             save_db(db); st.rerun()
-    st.markdown('</div>', unsafe_allow_html=True)
 else:
-    st.info("No hay movimientos registrados.")
+    st.info("Sin registros.")
 
-# Footer asimétrico
+if st.button("EDITAR PRESUPUESTO BASE", key="btn_sueldo", use_container_width=True):
+    sueldo_dialog()
+
+# Footer
 st.markdown(f"""
-<div style="margin-top:50px; text-align:center; opacity:0.3; font-size:10px; letter-spacing:3px;">
-    VAULT PREMIUM v2.0 • {datetime.now().year}
+<div style="margin-top:60px; text-align:center; opacity:0.2; font-size:9px; letter-spacing:5px; font-weight:800;">
+    EST. {datetime.now().year} • PRIVATE ACCESS
 </div>
 """, unsafe_allow_html=True)
