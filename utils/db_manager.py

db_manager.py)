@@ -2,9 +2,14 @@ import sqlite3
 import pandas as pd
 import os
 
-# Asegurarse de que la carpeta data exista
-os.makedirs('data', exist_ok=True)
-DB_NAME = "data/finanzas.db"
+# --- CORRECCIÓN DE RUTAS ---
+# Esto garantiza que siempre apunte a la carpeta 'data' en la raíz de tu proyecto
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+DATA_DIR = os.path.join(BASE_DIR, 'data')
+
+# Crear la carpeta data si no existe
+os.makedirs(DATA_DIR, exist_ok=True)
+DB_NAME = os.path.join(DATA_DIR, "finanzas.db")
 
 def init_db():
     """Crea la tabla si no existe."""
