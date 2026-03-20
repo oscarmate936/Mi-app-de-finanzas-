@@ -7,7 +7,7 @@ import uuid
 # --- CONFIGURACIÓN ---
 st.set_page_config(page_title="Vault Premium", page_icon="💎", layout="centered")
 
-# --- REDISEÑO ULTRA-PREMIUM (CSS) ---
+# --- REDISEÑO ULTRA-PREMIUM CORREGIDO (CSS) ---
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap');
@@ -69,7 +69,7 @@ st.markdown("""
     .stat-n { font-size: 22px; font-weight: 700; margin-top: 5px; }
     .stat-t { font-size: 10px; font-weight: 600; color: #64748B; text-transform: uppercase; letter-spacing: 1px; }
 
-    /* 3. Botones Neomorfistas */
+    /* 3. Botones Neomorfistas (CORRECCIÓN DE VISIBILIDAD) */
     div.stButton > button {
         border-radius: 20px !important;
         padding: 20px !important;
@@ -78,20 +78,41 @@ st.markdown("""
         border: none !important;
         transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
     }
+    
+    /* Esta regla fuerza a los hijos del botón a usar el color definido en el botón */
+    div.stButton > button * {
+        color: inherit !important;
+    }
+
+    /* Botón INGRESO: Fondo claro, texto oscuro */
     button[key="btn_ingreso"] {
         background: #F8FAFC !important;
+        color: #020617 !important; /* Color de texto oscuro para fondo claro */
+    }
+    /* Asegurar que el texto dentro del botón de ingreso sea oscuro */
+    button[key="btn_ingreso"] * {
         color: #020617 !important;
     }
+
+    /* Botón GASTO: Fondo rosa suave, texto rosa */
     button[key="btn_gasto"] {
         background: rgba(244, 63, 94, 0.15) !important;
         color: #FB7185 !important;
         border: 1px solid rgba(244, 63, 94, 0.2) !important;
     }
+    button[key="btn_gasto"] * {
+        color: #FB7185 !important;
+    }
+
+    /* Botón CONFIGURAR: Fondo transparente, texto gris */
     button[key="btn_sueldo"] {
         background: transparent !important;
         color: #64748B !important;
         border: 1px solid rgba(148, 163, 184, 0.1) !important;
         margin-top: 20px !important;
+    }
+    button[key="btn_sueldo"] * {
+        color: #64748B !important;
     }
 
     /* 4. Transaction Feed */
@@ -113,6 +134,21 @@ st.markdown("""
     .tx-cat { font-size: 9px; font-weight: 800; text-transform: uppercase; color: #475569; }
     .tx-note { font-size: 15px; font-weight: 500; color: #E2E8F0; }
     .tx-amt { font-size: 16px; font-weight: 700; }
+
+    /* Estilo para el botón Eliminar (más pequeño, discreto y legible) */
+    div.stButton button[key^="del_"] {
+        background: transparent !important;
+        color: #64748B !important; /* Texto gris */
+        font-size: 10px !important;
+        padding: 5px 10px !important;
+        border: none !important;
+        border-radius: 8px !important;
+        transition: all 0.2s ease !important;
+    }
+    div.stButton button[key^="del_"]:hover {
+        color: #F43F5E !important; /* Hover rojo */
+        background: rgba(244, 63, 94, 0.1) !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -247,7 +283,7 @@ if not df.empty:
         """, unsafe_allow_html=True)
         
         # El botón de borrar se mantiene funcional pero discreto
-        if st.button(f"Eliminar {row['id']}", key=f"del_{row['id']}", help="Remover"):
+        if st.button(f"🗑️ {row['id']}", key=f"del_{row['id']}", help="Remover"):
             db["transactions"] = [t for t in db["transactions"] if t["id"] != row['id']]
             save_db(db); st.rerun()
 else:
