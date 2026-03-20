@@ -1,24 +1,20 @@
 import streamlit as st
 import pandas as pd
-import sqlite3
 from datetime import datetime
 import plotly.express as px
+import requests
+import uuid
 
 # --- CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(page_title="Mi Cash Book", page_icon="💰", layout="centered")
 
-# --- MAGIA CSS ---
+# --- ESTILOS VISUALES (MÓVIL) ---
 st.markdown("""
 <style>
 header {visibility: hidden;}
+button p { white-space: pre-wrap !important; text-align: center !important; line-height: 1.4 !important; }
 
-button p {
-    white-space: pre-wrap !important;
-    text-align: center !important;
-    line-height: 1.4 !important;
-}
-
-/* 1. Botón SUELDO y EDITAR (tertiary -> Azul) */
+/* Botón Sueldo */
 button[kind="tertiary"] {
     background-color: #f8f9fa !important;
     border: 2px dashed #007bff !important;
@@ -26,337 +22,144 @@ button[kind="tertiary"] {
     padding: 15px !important;
     min-height: 90px !important;
 }
-button[kind="tertiary"] p {
-    color: #007bff !important;
-    font-size: 16px !important;
-    font-weight: 600 !important;
-}
 
-/* 2. Botón INGRESOS (secondary -> Verde) */
+/* Botón Ingresos (Verde) */
 button[kind="secondary"] {
     background-color: #e8f5e9 !important;
     border: 2px solid #4CAF50 !important;
     border-radius: 15px !important;
     padding: 20px !important;
     min-height: 100px !important;
-    box-shadow: 0 4px 6px rgba(76, 175, 80, 0.1) !important;
 }
-button[kind="secondary"] p {
-    color: #2e7d32 !important;
-    font-size: 18px !important;
-    font-weight: 700 !important;
-}
+button[kind="secondary"] p { color: #2e7d32 !important; font-weight: 700 !important; font-size: 16px !important; }
 
-/* 3. Botón GASTOS y BORRAR (primary -> Rojo) */
+/* Botón Gastos (Rojo) */
 button[kind="primary"] {
     background-color: #ffebee !important;
     border: 2px solid #F44336 !important;
     border-radius: 15px !important;
     padding: 20px !important;
     min-height: 100px !important;
-    box-shadow: 0 4px 6px rgba(244, 67, 54, 0.1) !important;
 }
-button[kind="primary"] p {
-    color: #c62828 !important;
-    font-size: 18px !important;
-    font-weight: 700 !important;
-}
+button[kind="primary"] p { color: #c62828 !important; font-weight: 700 !important; font-size: 16px !important; }
 
-/* Tarjeta Saldo Total */
+/* Tarjeta Azul Saldo */
 .total-card {
     background: linear-gradient(135deg, #007bff, #0056b3);
     color: white;
     border-radius: 20px;
-    padding: 30px;
+    padding: 25px;
     text-align: center;
-    box-shadow: 0 8px 15px rgba(0, 123, 255, 0.3);
-    margin-top: 15px;
-    margin-bottom: 20px;
-}
-.total-value {
-    font-size: 48px;
-    font-weight: bold;
-    margin: 0;
+    box-shadow: 0 8px 15px rgba(0, 123, 255, 0.2);
+    margin: 15px 0;
 }
 </style>
 """, unsafe_allow_html=True)
 
-# --- BASE DE DATOS Y FUNCIONES ---
-DB_NAME = 'cashbook.db'
+# --- CONEXIÓN A JSONBIN ---
+BIN_ID = st.secrets["bin_id"]
+API_KEY = st.secrets["api_key"]
+URL = f"https://api.jsonbin.io/v3/b/{BIN_ID}"
+HEADERS = {"X-Master-Key": API_KEY, "Content-Type": "application/json"}
 
-def init_db():
-    conn = sqlite3.connect(DB_NAME)
-    c = conn.cursor()
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS transactions (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            date TEXT,
-            type TEXT,
-            category TEXT,
-            amount REAL,
-            note TEXT
-        )
-    ''')
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS settings (
-            key TEXT PRIMARY KEY,
-            value TEXT
-        )
-    ''')
-    c.execute('INSERT OR IGNORE INTO settings (key, value) VALUES ("sueldo_base", "0")')
-    c.execute('INSERT OR IGNORE INTO settings (key, value) VALUES ("fecha_pago", "")')
-    conn.commit()
-    conn.close()
-
-def get_setting(key):
-    conn = sqlite3.connect(DB_NAME)
-    c = conn.cursor()
-    c.execute('SELECT value FROM settings WHERE key = ?', (key,))
-    result = c.fetchone()
-    conn.close()
-    return result[0] if result else ("0" if key == "sueldo_base" else "")
-
-def update_setting(key, value):
-    conn = sqlite3.connect(DB_NAME)
-    c = conn.cursor()
-    c.execute('UPDATE settings SET value = ? WHERE key = ?', (value, key))
-    conn.commit()
-    conn.close()
-
-def add_transaction(date, t_type, category, amount, note):
-    conn = sqlite3.connect(DB_NAME)
-    c = conn.cursor()
-    c.execute('INSERT INTO transactions (date, type, category, amount, note) VALUES (?, ?, ?, ?, ?)',
-              (date, t_type, category, amount, note))
-    conn.commit()
-    conn.close()
-
-def update_transaction(t_id, date, t_type, category, amount, note):
-    conn = sqlite3.connect(DB_NAME)
-    c = conn.cursor()
-    c.execute('UPDATE transactions SET date=?, type=?, category=?, amount=?, note=? WHERE id=?',
-              (date, t_type, category, amount, note, t_id))
-    conn.commit()
-    conn.close()
-
-def delete_transaction(t_id):
-    conn = sqlite3.connect(DB_NAME)
-    c = conn.cursor()
-    c.execute('DELETE FROM transactions WHERE id=?', (t_id,))
-    conn.commit()
-    conn.close()
-
-def get_data():
-    conn = sqlite3.connect(DB_NAME)
-    df = pd.read_sql_query("SELECT * FROM transactions", conn)
-    conn.close()
-    return df
-
-init_db()
-
-# --- PREPARACIÓN DE DATOS GLOBALES ---
-df_all = get_data()
-
-try:
-    sueldo_base = float(get_setting("sueldo_base"))
-except ValueError:
-    sueldo_base = 0.0
-
-fecha_pago_db = get_setting("fecha_pago")
-try:
-    if fecha_pago_db:
-        fecha_obj = datetime.strptime(fecha_pago_db, "%Y-%m-%d").date()
-        fecha_mostrar = fecha_obj.strftime("%d/%m/%Y")
-        fecha_obj_default = fecha_obj
-    else:
-        fecha_mostrar = "Sin fecha configurada"
-        fecha_obj_default = datetime.today()
-except ValueError:
-    fecha_mostrar = "Sin fecha configurada"
-    fecha_obj_default = datetime.today()
-
-total_ingresos = df_all[df_all['type'] == 'Ingreso']['amount'].sum() if not df_all.empty else 0.00
-total_gastos = df_all[df_all['type'] == 'Gasto']['amount'].sum() if not df_all.empty else 0.00
-saldo_total = sueldo_base + total_ingresos - total_gastos
-
-# --- VENTANAS EMERGENTES (DIALOGS) ---
-@st.dialog("⚙️ Configurar Sueldo y Fecha")
-def config_dialog():
-    nuevo_sueldo = st.number_input("Sueldo Base ($)", min_value=0.0, value=sueldo_base, step=10.0)
-    nueva_fecha = st.date_input("Fecha de pago", value=fecha_obj_default)
-    if st.button("Guardar Datos", use_container_width=True, type="secondary"):
-        update_setting("sueldo_base", str(nuevo_sueldo))
-        update_setting("fecha_pago", nueva_fecha.strftime("%Y-%m-%d"))
-        st.rerun()
-
-@st.dialog("🟢 Añadir Ingreso")
-def ingreso_dialog():
-    monto = st.number_input("Monto ($)", min_value=0.01, format="%.2f")
-    nota = st.text_input("Descripción (Ej. Venta, Bono)")
-    fecha = st.date_input("Fecha", datetime.today())
-    if st.button("Guardar", use_container_width=True, type="secondary"):
-        add_transaction(fecha.strftime("%Y-%m-%d"), "Ingreso", "Ingreso", monto, nota)
-        st.rerun()
-
-@st.dialog("🔴 Añadir Gasto")
-def gasto_dialog():
-    categoria = st.selectbox("Categoría", ["Comida", "Transporte", "Servicios", "Vivienda", "Entretenimiento", "Salud", "Ropa", "Otros"])
-    monto = st.number_input("Monto ($)", min_value=0.01, format="%.2f")
-    nota = st.text_input("Descripción")
-    fecha = st.date_input("Fecha", datetime.today())
-    if st.button("Guardar", use_container_width=True, type="secondary"):
-        add_transaction(fecha.strftime("%Y-%m-%d"), "Gasto", category=categoria, amount=monto, note=nota)
-        st.rerun()
-
-@st.dialog("✏️ Editar Registro")
-def edit_dialog(t_id, curr_date, curr_type, curr_cat, curr_amt, curr_note):
+def get_db():
     try:
-        d_obj = datetime.strptime(curr_date, "%Y-%m-%d").date()
+        res = requests.get(URL, headers={"X-Master-Key": API_KEY})
+        data = res.json().get('record', {})
+        if "transactions" not in data: data["transactions"] = []
+        if "settings" not in data: data["settings"] = {}
+        return data
     except:
-        d_obj = datetime.today()
-        
-    new_date = st.date_input("Nueva Fecha", value=d_obj)
-    new_type = st.selectbox("Tipo", ["Gasto", "Ingreso"], index=0 if curr_type == "Gasto" else 1)
-    
-    cats = ["Comida", "Transporte", "Servicios", "Vivienda", "Entretenimiento", "Salud", "Ropa", "Ingreso", "Otros"]
-    idx = cats.index(curr_cat) if curr_cat in cats else 8
-    new_cat = st.selectbox("Categoría", cats, index=idx)
-    
-    new_amt = st.number_input("Monto ($)", min_value=0.01, value=float(curr_amt), format="%.2f")
-    new_note = st.text_input("Descripción", value=curr_note if curr_note else "")
-    
-    if st.button("💾 Guardar Cambios", use_container_width=True, type="secondary"):
-        update_transaction(t_id, new_date.strftime("%Y-%m-%d"), new_type, new_cat, new_amt, new_note)
+        return {"transactions": [], "settings": {}}
+
+def save_db(data):
+    requests.put(URL, json=data, headers=HEADERS)
+
+db = get_db()
+
+# --- FUNCIONES DE LÓGICA ---
+def add_trans(date, t_type, cat, amt, note):
+    t_id = str(uuid.uuid4())[:8]
+    db["transactions"].append({"id": t_id, "date": date, "type": t_type, "category": cat, "amount": float(amt), "note": note})
+    save_db(db)
+
+def delete_trans(t_id):
+    db["transactions"] = [t for t in db["transactions"] if t["id"] != str(t_id)]
+    save_db(db)
+
+# --- DATOS PARA MOSTRAR ---
+df = pd.DataFrame(db["transactions"])
+sueldo = float(db["settings"].get("sueldo", 0))
+fecha_pago = db["settings"].get("fecha", "No definida")
+
+if not df.empty:
+    ingresos_totales = df[df['type'] == 'Ingreso']['amount'].sum()
+    gastos_totales = df[df['type'] == 'Gasto']['amount'].sum()
+else:
+    ingresos_totales = gastos_totales = 0.0
+
+saldo_final = sueldo + ingresos_totales - gastos_totales
+
+# --- VENTANAS (DIALOGS) ---
+@st.dialog("⚙️ Configurar Sueldo")
+def config():
+    s = st.number_input("Sueldo Base", value=sueldo)
+    f = st.date_input("Fecha de Pago")
+    if st.button("Guardar"):
+        db["settings"]["sueldo"] = s
+        db["settings"]["fecha"] = f.strftime("%d/%m/%Y")
+        save_db(db)
         st.rerun()
 
-# ==========================================
-# ESTRUCTURA DE 3 PESTAÑAS
-# ==========================================
-tab1, tab2, tab3 = st.tabs(["🏠 Inicio", "📝 Historial", "📊 Gráficos"])
+@st.dialog("🟢 Nuevo Ingreso")
+def ingreso():
+    amt = st.number_input("Monto", min_value=0.01)
+    note = st.text_input("Nota")
+    if st.button("Añadir"):
+        add_trans(datetime.now().strftime("%Y-%m-%d"), "Ingreso", "Ingreso Extra", amt, note)
+        st.rerun()
 
-# --- PESTAÑA 1: INICIO ---
-with tab1:
-    st.write("")
-    texto_sueldo = f"⚙️ Sueldo Base: ${sueldo_base:,.2f}\n📅 Fecha de Pago: {fecha_mostrar}"
-    if st.button(texto_sueldo, type="tertiary", use_container_width=True):
-        config_dialog()
+@st.dialog("🔴 Nuevo Gasto")
+def gasto():
+    cat = st.selectbox("Categoría", ["Comida", "Transporte", "Servicios", "Vivienda", "Ocio", "Salud", "Otros"])
+    amt = st.number_input("Monto", min_value=0.01)
+    note = st.text_input("Nota")
+    if st.button("Registrar"):
+        add_trans(datetime.now().strftime("%Y-%m-%d"), "Gasto", cat, amt, note)
+        st.rerun()
 
-    st.write("")
+# --- INTERFAZ ---
+t1, t2, t3 = st.tabs(["🏠 Inicio", "📝 Historial", "📊 Gráficos"])
+
+with t1:
+    if st.button(f"⚙️ Sueldo: ${sueldo:,.2f}\n📅 Pago: {fecha_pago}", type="tertiary", use_container_width=True):
+        config()
+    
     col1, col2 = st.columns(2, gap="small")
     with col1:
-        texto_ingresos = f"↓ INGRESOS\n${total_ingresos:,.2f}"
-        if st.button(texto_ingresos, type="secondary", use_container_width=True):
-            ingreso_dialog()
+        if st.button(f"↓ INGRESOS\n${ingresos_totales:,.2f}", type="secondary", use_container_width=True):
+            ingreso()
     with col2:
-        texto_gastos = f"↑ GASTOS\n${total_gastos:,.2f}"
-        if st.button(texto_gastos, type="primary", use_container_width=True):
-            gasto_dialog()
-
-    st.markdown(f"""
-    <div class="total-card">
-        <div style="font-size: 16px; opacity: 0.9;">Saldo Total Disponible</div>
-        <div class="total-value">${saldo_total:,.2f}</div>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    if not df_all.empty:
-        st.markdown("**Últimos movimientos**")
-        df_recent = df_all.sort_values(by='id', ascending=False).head(3)
-        for index, row in df_recent.iterrows():
-            color = "#dc3545" if row['type'] == 'Gasto' else "#28a745"
-            signo = "-" if row['type'] == 'Gasto' else "+"
-            st.markdown(f"""
-            <div style="border-bottom: 1px solid #eee; padding: 10px 0; display: flex; justify-content: space-between;">
-                <span style="color: #555; font-weight: 500;">{row['category']} <span style="color: #999; font-size: 13px;">({row['note']})</span></span>
-                <span style="color: {color}; font-weight: bold;">{signo}${row['amount']:,.2f}</span>
-            </div>
-            """, unsafe_allow_html=True)
-
-# --- PESTAÑA 2: HISTORIAL Y EDICIÓN ---
-with tab2:
-    st.header("📝 Gestión de Historial")
-    
-    if not df_all.empty:
-        # Preparamos el dataframe para mostrarlo con el ID visible
-        df_mostrar = df_all.copy()
-        df_mostrar['ID'] = df_mostrar['id']
-        df_mostrar['Fecha'] = pd.to_datetime(df_mostrar['date']).dt.strftime('%d/%m/%Y')
-        df_mostrar['Tipo'] = df_mostrar['type']
-        df_mostrar['Categoría'] = df_mostrar['category']
-        df_mostrar['Monto ($)'] = df_mostrar['amount']
-        df_mostrar['Nota'] = df_mostrar['note']
-        
-        # Mostrar tabla
-        st.dataframe(
-            df_mostrar[['ID', 'Fecha', 'Tipo', 'Categoría', 'Monto ($)', 'Nota']].sort_values(by='ID', ascending=False),
-            use_container_width=True,
-            hide_index=True
-        )
-        
-        st.write("---")
-        st.subheader("⚙️ Editar o Borrar Registro")
-        
-        # Selector de ID
-        lista_ids = df_mostrar['ID'].sort_values(ascending=False).tolist()
-        selected_id = st.selectbox("Selecciona el ID del registro que deseas modificar:", lista_ids)
-        
-        if selected_id:
-            # Mostrar qué registro está seleccionado
-            registro = df_all[df_all['id'] == selected_id].iloc[0]
-            st.info(f"Seleccionado: **{registro['type']}** de **{registro['category']}** por **${registro['amount']}**")
+        if st.button(f"↑ GASTOS\n${gastos_totales:,.2f}", type="primary", use_container_width=True):
+            gasto()
             
-            # Botones de acción usando los estilos (Azul para editar, Rojo para borrar)
-            col_ed, col_del = st.columns(2)
-            with col_ed:
-                if st.button("✏️ Editar", type="tertiary", use_container_width=True):
-                    edit_dialog(selected_id, registro['date'], registro['type'], registro['category'], registro['amount'], registro['note'])
-            with col_del:
-                if st.button("🗑️ Borrar", type="primary", use_container_width=True):
-                    delete_transaction(selected_id)
-                    st.rerun()
-    else:
-        st.info("Aún no tienes movimientos registrados en tu historial.")
+    st.markdown(f'<div class="total-card"><small>Saldo Total</small><div class="total-value">${saldo_total:,.2f}</div></div>', unsafe_allow_html=True)
 
-# --- PESTAÑA 3: GRÁFICOS ---
-with tab3:
-    st.header("📊 Análisis Visual")
-    
-    if not df_all.empty:
-        df_all['date'] = pd.to_datetime(df_all['date'])
-        df_gastos = df_all[df_all['type'] == 'Gasto'].copy()
+with t2:
+    st.subheader("Historial")
+    if not df.empty:
+        st.dataframe(df[['date', 'category', 'amount', 'note']].iloc[::-1], use_container_width=True, hide_index=True)
+        sel = st.selectbox("Borrar registro (ID):", df['id'].tolist())
+        if st.button("🗑️ Eliminar Seleccionado"):
+            delete_trans(sel)
+            st.rerun()
+
+with t3:
+    st.subheader("Análisis")
+    if not df.empty and (df['type'] == 'Gasto').any():
+        fig = px.pie(df[df['type'] == 'Gasto'], values='amount', names='category', hole=0.4, title="Gastos por Categoría")
+        st.plotly_chart(fig, use_container_width=True)
         
-        if not df_gastos.empty:
-            df_gastos['Día'] = df_gastos['date'].dt.date
-            df_gastos['Semana'] = df_gastos['date'].dt.strftime('%Y - Sem %U')
-            df_gastos['Mes'] = df_gastos['date'].dt.strftime('%Y - %B')
-            
-            st.subheader("Mis Gastos en el Tiempo")
-            graf_dia, graf_sem, graf_mes = st.tabs(["Por Día", "Por Semana", "Por Mes"])
-            
-            with graf_dia:
-                gastos_diarios = df_gastos.groupby('Día')['amount'].sum().reset_index()
-                fig1 = px.bar(gastos_diarios, x='Día', y='amount', text_auto='.2f', color_discrete_sequence=['#F44336'])
-                fig1.update_layout(xaxis_title="", yaxis_title="Monto ($)", margin=dict(l=0, r=0, t=30, b=0))
-                st.plotly_chart(fig1, use_container_width=True)
-                
-            with graf_sem:
-                gastos_semanales = df_gastos.groupby('Semana')['amount'].sum().reset_index()
-                fig2 = px.bar(gastos_semanales, x='Semana', y='amount', text_auto='.2f', color_discrete_sequence=['#FF9800'])
-                fig2.update_layout(xaxis_title="", yaxis_title="Monto ($)", margin=dict(l=0, r=0, t=30, b=0))
-                st.plotly_chart(fig2, use_container_width=True)
-                
-            with graf_mes:
-                gastos_mensuales = df_gastos.groupby('Mes')['amount'].sum().reset_index()
-                fig3 = px.bar(gastos_mensuales, x='Mes', y='amount', text_auto='.2f', color_discrete_sequence=['#9C27B0'])
-                fig3.update_layout(xaxis_title="", yaxis_title="Monto ($)", margin=dict(l=0, r=0, t=30, b=0))
-                st.plotly_chart(fig3, use_container_width=True)
-
-            st.write("---")
-            st.subheader("🥧 Distribución por Categorías")
-            gastos_cat = df_gastos.groupby('category')['amount'].sum().reset_index()
-            fig_pie = px.pie(gastos_cat, values='amount', names='category', hole=0.4)
-            st.plotly_chart(fig_pie, use_container_width=True)
-        else:
-            st.info("No tienes gastos registrados para graficar. (Solo ingresos)")
-    else:
-        st.info("Agrega datos en la pestaña de 'Inicio' para ver tus gráficos.")
+        df['date'] = pd.to_datetime(df['date'])
+        fig2 = px.bar(df[df['type'] == 'Gasto'].groupby('date')['amount'].sum().reset_index(), x='date', y='amount', title="Gastos por Día")
+        st.plotly_chart(fig2, use_container_width=True)
