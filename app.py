@@ -1,80 +1,125 @@
 import streamlit as st
 import pandas as pd
+import sqlite3
+from datetime import datetime
 import plotly.express as px
-from db_manager import init_db, get_transacciones, get_config, update_config
 
-st.set_page_config(page_title="Gestor Financiero Pro", page_icon="💼", layout="wide")
+# --- CONFIGURACIÓN DE PÁGINA ---
+st.set_page_config(page_title="Mi Libro de Caja", page_icon="💰", layout="wide")
+
+# --- BASE DE DATOS ---
+def init_db():
+    conn = sqlite3.connect('cashbook.db')
+    c = conn.cursor()
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS transactions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            date TEXT,
+            type TEXT,
+            category TEXT,
+            amount REAL,
+            note TEXT
+        )
+    ''')
+    conn.commit()
+    conn.close()
+
+def add_transaction(date, t_type, category, amount, note):
+    conn = sqlite3.connect('cashbook.db')
+    c = conn.cursor()
+    c.execute('INSERT INTO transactions (date, type, category, amount, note) VALUES (?, ?, ?, ?, ?)',
+              (date, t_type, category, amount, note))
+    conn.commit()
+    conn.close()
+
+def get_data():
+    conn = sqlite3.connect('cashbook.db')
+    df = pd.read_sql_query("SELECT * FROM transactions", conn)
+    conn.close()
+    return df
+
+def delete_transaction(t_id):
+    conn = sqlite3.connect('cashbook.db')
+    c = conn.cursor()
+    c.execute('DELETE FROM transactions WHERE id = ?', (t_id,))
+    conn.commit()
+    conn.close()
+
+# Inicializar base de datos
 init_db()
 
-# Cargar configuración del usuario
-config = get_config()
+# --- INTERFAZ DE USUARIO ---
+st.title("💰 Mi Libro de Caja Personal")
 
-st.title("💼 Mi Resumen Financiero")
-st.markdown("Control total de tu patrimonio y flujo de caja.")
+# BARRA LATERAL: Formulario de ingreso
+with st.sidebar:
+    st.header("📝 Nuevo Registro")
+    with st.form("transaction_form", clear_on_submit=True):
+        date = st.date_input("Fecha", datetime.today())
+        t_type = st.radio("Tipo", ["Gasto", "Ingreso"])
+        
+        # Categorías dinámicas según el tipo
+        if t_type == "Gasto":
+            category = st.selectbox("Categoría", ["Comida", "Transporte", "Vivienda", "Servicios", "Entretenimiento", "Salud", "Otros"])
+        else:
+            category = st.selectbox("Categoría", ["Salario", "Negocio", "Inversiones", "Otros"])
+            
+        amount = st.number_input("Monto ($)", min_value=0.01, format="%.2f")
+        note = st.text_input("Nota / Descripción")
+        
+        submit = st.form_submit_button("Guardar Registro")
+        
+        if submit:
+            add_transaction(date.strftime("%Y-%m-%d"), t_type, category, amount, note)
+            st.success("¡Registro guardado con éxito!")
 
-# --- PANEL DE CONFIGURACIÓN DE SUELDO ---
-# Se abre automáticamente si el sueldo es 0 (primera vez)
-with st.expander("⚙️ Mi Sueldo y Fecha de Pago", expanded=(config['salario'] == 0)):
-    st.markdown("Configura tu ingreso principal. Los ingresos adicionales que registres se sumarán a este monto.")
-    col1, col2, col3 = st.columns([2, 2, 1])
-    with col1:
-        nuevo_salario = st.number_input("Sueldo Mensual Fijo ($)", min_value=0.0, value=config['salario'], step=100.0)
-    with col2:
-        nuevo_dia = st.number_input("Día de Pago (1-31)", min_value=1, max_value=31, value=config['dia_pago'], step=1)
-    with col3:
-        st.write("")
-        st.write("")
-        if st.button("Guardar Datos", use_container_width=True, type="primary"):
-            update_config(nuevo_salario, nuevo_dia)
-            st.success("¡Configuración guardada!")
-            st.rerun()
+# --- PANEL PRINCIPAL: Datos y Gráficos ---
+df = get_data()
 
-st.divider()
-
-# --- CÁLCULO DE SALDOS ---
-df = get_transacciones()
 if not df.empty:
-    ingresos_extra = df[df['tipo'] == 'Ingreso']['monto'].sum()
-    gastos = df[df['tipo'] == 'Gasto']['monto'].sum()
-else:
-    ingresos_extra, gastos = 0.0, 0.0
-
-# MATEMÁTICA PRO: Sueldo + Ingresos Extras - Gastos
-saldo_actual = config['salario'] + ingresos_extra - gastos
-
-# --- MÉTRICAS PREMIUM ---
-col_m1, col_m2, col_m3, col_m4 = st.columns(4)
-
-col_m1.metric("💰 Saldo Disponible", f"${saldo_actual:,.2f}", f"Sueldo Base: ${config['salario']:,.0f}")
-col_m2.metric("💵 Ingresos Extras", f"${ingresos_extra:,.2f}")
-col_m3.metric("📉 Gastos Realizados", f"${gastos:,.2f}")
-
-# Calcular porcentaje gastado del total (Sueldo + Extras)
-ingreso_total = config['salario'] + ingresos_extra
-porcentaje_gasto = (gastos / ingreso_total) * 100 if ingreso_total > 0 else 0
-col_m4.metric("🔥 Dinero Gastado", f"{porcentaje_gasto:.1f}%", delta_color="inverse")
-
-st.divider()
-
-# --- GRÁFICOS INTERACTIVOS (PLOTLY) ---
-st.subheader("📊 Análisis Visual")
-if not df.empty and gastos > 0:
-    col_graf_1, col_graf_2 = st.columns(2)
+    # Convertir monto a numérico por si acaso
+    df['amount'] = pd.to_numeric(df['amount'])
     
-    with col_graf_1:
-        df_gastos = df[df['tipo'] == 'Gasto']
-        if not df_gastos.empty:
-            gastos_por_categoria = df_gastos.groupby('categoria')['monto'].sum().reset_index()
-            fig_dona = px.pie(gastos_por_categoria, values='monto', names='categoria', hole=0.5, 
-                              title="Distribución de tus Gastos", color_discrete_sequence=px.colors.sequential.Greens_r)
-            fig_dona.update_layout(plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", font_color="white")
-            st.plotly_chart(fig_dona, use_container_width=True)
+    # Calcular métricas
+    total_ingresos = df[df['type'] == 'Ingreso']['amount'].sum()
+    total_gastos = df[df['type'] == 'Gasto']['amount'].sum()
+    saldo_actual = total_ingresos - total_gastos
 
-    with col_graf_2:
-        resumen_df = df.groupby('tipo')['monto'].sum().reset_index()
-        fig_barras = px.bar(resumen_df, x='tipo', y='monto', color='tipo', title="Ingresos Extras vs Gastos",
-                            text_auto='.2s', color_discrete_map={'Ingreso': '#2ECC71', 'Gasto': '#E74C3C'})
-        fig_barras.update_layout(plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", font_color="white")
-        st.plotly_chart(fig_barras, use_container_width=True)
+    # Mostrar métricas destacadas
+    col1, col2, col3 = st.columns(3)
+    col1.metric("Saldo Actual", f"${saldo_actual:,.2f}")
+    col2.metric("Total Ingresos", f"${total_ingresos:,.2f}")
+    col3.metric("Total Gastos", f"${total_gastos:,.2f}")
+    
+    st.markdown("---")
+    
+    # Mostrar Gráficos y Tabla en columnas
+    col_chart, col_table = st.columns([1, 1])
+    
+    with col_chart:
+        st.subheader("Distribución de Gastos")
+        df_gastos = df[df['type'] == 'Gasto']
+        if not df_gastos.empty:
+            fig = px.pie(df_gastos, values='amount', names='category', hole=0.4)
+            st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.info("Aún no hay gastos registrados para graficar.")
+            
+    with col_table:
+        st.subheader("Historial de Transacciones")
+        # Mostrar el dataframe ordenado por fecha de forma descendente
+        st.dataframe(
+            df.sort_values(by='id', ascending=False).drop(columns=['id']), 
+            use_container_width=True,
+            hide_index=True
+        )
+        
+        # Pequeño sistema para eliminar registros si te equivocas
+        st.write("¿Eliminar un registro?")
+        del_id = st.selectbox("Selecciona el ID a eliminar", df['id'].tolist())
+        if st.button("Eliminar Registro"):
+            delete_transaction(del_id)
+            st.rerun() # Recargar la página para actualizar los datos
+
 else:
-    st.info("Añade algunos movimientos para ver tus gráficos.")
+    st.info("👋 ¡Bienvenido a tu Libro de Caja! Utiliza el menú de la izquierda para registrar tu primer ingreso o gasto.")
