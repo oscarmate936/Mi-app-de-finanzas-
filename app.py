@@ -6,47 +6,93 @@ from datetime import datetime
 # --- CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(page_title="Mi Cash Book", page_icon="💰", layout="centered")
 
-# --- MAGIA CSS PARA LOS BOTONES ---
+# --- MAGIA CSS PARA CONVERTIR BOTONES EN TARJETAS ---
 st.markdown("""
 <style>
-/* 1. Estilo para el botón verde (Ingresos) usando 'secondary' */
+/* Ocultar el header por defecto para look de app móvil */
+header {visibility: hidden;}
+
+/* Permite múltiples líneas de texto en los botones */
+button p {
+    white-space: pre-wrap !important;
+    text-align: center !important;
+    line-height: 1.4 !important;
+}
+
+/* 1. Botón SUELDO (Usando 'tertiary') */
+button[kind="tertiary"] {
+    background-color: #f8f9fa !important;
+    border: 2px dashed #007bff !important;
+    border-radius: 15px !important;
+    padding: 15px !important;
+    min-height: 90px !important;
+}
+button[kind="tertiary"] p {
+    color: #007bff !important;
+    font-size: 16px !important;
+    font-weight: 600 !important;
+}
+button[kind="tertiary"]:hover {
+    background-color: #e2eafc !important;
+}
+
+/* 2. Botón INGRESOS (Usando 'secondary' -> Verde) */
 button[kind="secondary"] {
-    background-color: #4CAF50 !important;
-    border-color: #4CAF50 !important;
-    border-radius: 12px !important;
-    height: 55px !important;
-    box-shadow: 0 4px 6px rgba(76, 175, 80, 0.2) !important;
+    background-color: #e8f5e9 !important;
+    border: 2px solid #4CAF50 !important;
+    border-radius: 15px !important;
+    padding: 20px !important;
+    min-height: 120px !important;
+    box-shadow: 0 4px 6px rgba(76, 175, 80, 0.1) !important;
 }
 button[kind="secondary"] p {
-    color: white !important;
-    font-weight: 600 !important;
-    font-size: 17px !important;
+    color: #2e7d32 !important;
+    font-size: 18px !important;
+    font-weight: 700 !important;
 }
 button[kind="secondary"]:hover {
-    background-color: #43a047 !important;
-    border-color: #43a047 !important;
+    background-color: #c8e6c9 !important;
 }
 
-/* 2. Estilo para el botón rojo (Gastos) usando 'primary' */
+/* 3. Botón GASTOS (Usando 'primary' -> Rojo) */
 button[kind="primary"] {
-    background-color: #F44336 !important;
-    border-color: #F44336 !important;
-    border-radius: 12px !important;
-    height: 55px !important;
-    box-shadow: 0 4px 6px rgba(244, 67, 54, 0.2) !important;
+    background-color: #ffebee !important;
+    border: 2px solid #F44336 !important;
+    border-radius: 15px !important;
+    padding: 20px !important;
+    min-height: 120px !important;
+    box-shadow: 0 4px 6px rgba(244, 67, 54, 0.1) !important;
 }
 button[kind="primary"] p {
-    color: white !important;
-    font-weight: 600 !important;
-    font-size: 17px !important;
+    color: #c62828 !important;
+    font-size: 18px !important;
+    font-weight: 700 !important;
 }
 button[kind="primary"]:hover {
-    background-color: #e53935 !important;
-    border-color: #e53935 !important;
+    background-color: #ffcdd2 !important;
 }
 
-/* Ocultar el header por defecto de Streamlit para que parezca app móvil */
-header {visibility: hidden;}
+/* 4. Tarjeta de Saldo Total (HTML puro, no clickeable) */
+.total-card {
+    background: linear-gradient(135deg, #007bff, #0056b3);
+    color: white;
+    border-radius: 20px;
+    padding: 30px;
+    text-align: center;
+    box-shadow: 0 8px 15px rgba(0, 123, 255, 0.3);
+    margin-top: 15px;
+    margin-bottom: 25px;
+}
+.total-label {
+    font-size: 16px;
+    opacity: 0.9;
+    margin-bottom: 5px;
+}
+.total-value {
+    font-size: 48px;
+    font-weight: bold;
+    margin: 0;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -73,7 +119,8 @@ def init_db():
         )
     ''')
     c.execute('INSERT OR IGNORE INTO settings (key, value) VALUES ("sueldo_base", "0")')
-    c.execute('INSERT OR IGNORE INTO settings (key, value) VALUES ("dia_pago", "1")')
+    # Guardamos la fecha completa en lugar de solo el día
+    c.execute('INSERT OR IGNORE INTO settings (key, value) VALUES ("fecha_pago", "")')
     conn.commit()
     conn.close()
 
@@ -83,7 +130,7 @@ def get_setting(key):
     c.execute('SELECT value FROM settings WHERE key = ?', (key,))
     result = c.fetchone()
     conn.close()
-    return result[0] if result else "0"
+    return result[0] if result else ("0" if key == "sueldo_base" else "")
 
 def update_setting(key, value):
     conn = sqlite3.connect(DB_NAME)
@@ -108,121 +155,97 @@ def get_data():
 
 init_db()
 
+# --- PREPARACIÓN DE DATOS ---
+df_all = get_data()
+sueldo_base = float(get_setting("sueldo_base"))
+fecha_pago_db = get_setting("fecha_pago")
+
+# Formatear la fecha para mostrarla de forma legible (ej. 15/03/2026)
+if fecha_pago_db == "":
+    fecha_mostrar = "Sin fecha"
+    fecha_obj_default = datetime.today()
+else:
+    fecha_obj = datetime.strptime(fecha_pago_db, "%Y-%m-%d").date()
+    fecha_mostrar = fecha_obj.strftime("%d/%m/%Y")
+    fecha_obj_default = fecha_obj
+
+total_ingresos = df_all[df_all['type'] == 'Ingreso']['amount'].sum() if not df_all.empty else 0.00
+total_gastos = df_all[df_all['type'] == 'Gasto']['amount'].sum() if not df_all.empty else 0.00
+saldo_total = sueldo_base + total_ingresos - total_gastos
+
 # --- VENTANAS EMERGENTES (DIALOGS) ---
-@st.dialog("⚙️ Configurar Mi Sueldo")
+@st.dialog("⚙️ Configurar Sueldo y Fecha de Pago")
 def config_dialog():
-    sueldo_actual = float(get_setting("sueldo_base"))
-    dia_actual = int(get_setting("dia_pago"))
+    nuevo_sueldo = st.number_input("Sueldo Base ($)", min_value=0.0, value=sueldo_base, step=10.0)
+    nueva_fecha = st.date_input("Fecha exacta de pago", value=fecha_obj_default)
     
-    nuevo_sueldo = st.number_input("Sueldo Base ($)", min_value=0.0, value=sueldo_actual, step=10.0)
-    nuevo_dia = st.number_input("Día de pago (1-31)", min_value=1, max_value=31, value=dia_actual)
-    
-    if st.button("Guardar", use_container_width=True):
+    if st.button("Guardar Datos", use_container_width=True):
         update_setting("sueldo_base", str(nuevo_sueldo))
-        update_setting("dia_pago", str(nuevo_dia))
+        update_setting("fecha_pago", nueva_fecha.strftime("%Y-%m-%d"))
         st.rerun()
 
-@st.dialog("🔴 Registrar Gasto")
+@st.dialog("🟢 Añadir Ingreso")
+def ingreso_dialog():
+    monto = st.number_input("Monto del ingreso ($)", min_value=0.01, format="%.2f")
+    nota = st.text_input("Descripción (Ej. Venta, Bono)")
+    fecha = st.date_input("Fecha del ingreso", datetime.today())
+    
+    if st.button("Guardar Ingreso", use_container_width=True):
+        add_transaction(fecha.strftime("%Y-%m-%d"), "Ingreso", "Ingreso", monto, nota)
+        st.rerun()
+
+@st.dialog("🔴 Añadir Gasto")
 def gasto_dialog():
     categoria = st.selectbox("Categoría", ["Comida", "Transporte", "Servicios", "Vivienda", "Entretenimiento", "Salud", "Ropa", "Otros"])
-    monto = st.number_input("Monto ($)", min_value=0.01, format="%.2f")
+    monto = st.number_input("Monto del gasto ($)", min_value=0.01, format="%.2f")
     nota = st.text_input("Descripción (opcional)")
-    fecha = st.date_input("Fecha", datetime.today())
+    fecha = st.date_input("Fecha del gasto", datetime.today())
     
     if st.button("Guardar Gasto", use_container_width=True):
         add_transaction(fecha.strftime("%Y-%m-%d"), "Gasto", categoria, monto, nota)
         st.rerun()
 
-@st.dialog("🟢 Registrar Ingreso Extra")
-def ingreso_dialog():
-    monto = st.number_input("Monto ($)", min_value=0.01, format="%.2f")
-    nota = st.text_input("Descripción (Ej. Venta, Regalo)")
-    fecha = st.date_input("Fecha", datetime.today())
-    
-    if st.button("Guardar Ingreso", use_container_width=True):
-        add_transaction(fecha.strftime("%Y-%m-%d"), "Ingreso", "Ingreso Extra", monto, nota)
-        st.rerun()
-
-# --- LÓGICA DE DATOS ---
-df_all = get_data()
-sueldo_base = float(get_setting("sueldo_base"))
-dia_pago = get_setting("dia_pago")
-
-total_ingresos = df_all[df_all['type'] == 'Ingreso']['amount'].sum() if not df_all.empty else 0.00
-total_gastos = df_all[df_all['type'] == 'Gasto']['amount'].sum() if not df_all.empty else 0.00
-saldo_actual = sueldo_base + total_ingresos - total_gastos
 
 # --- INTERFAZ PRINCIPAL ---
-st.write("") 
+st.write("")
 
-# 1. Cabecera
-col_top1, col_top2 = st.columns([1, 4])
-with col_top1:
-    # Usamos type="tertiary" para que no le afecten los colores verde/rojo
-    if st.button("⚙️ Sueldo", type="tertiary"):
-        config_dialog()
-with col_top2:
-    st.markdown(f"<h2 style='text-align: center; margin-bottom: 0;'>${saldo_actual:,.2f}</h2>", unsafe_allow_html=True)
-    st.markdown(f"<p style='text-align: center; color: gray; margin-top: 0;'>Día de pago: {dia_pago}</p>", unsafe_allow_html=True)
+# 1. BOTÓN SUPERIOR: Sueldo y Fecha (Abre configuración al hacer clic)
+texto_sueldo = f"⚙️ Sueldo Base: ${sueldo_base:,.2f}\n📅 Fecha de Pago: {fecha_mostrar}"
+if st.button(texto_sueldo, type="tertiary", use_container_width=True):
+    config_dialog()
 
 st.write("")
 
-# 2. Tarjetas de Resumen
-col_ing, col_gas = st.columns(2)
-with col_ing:
-    st.markdown(f"<div style='background-color: white; padding: 15px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); text-align: center;'><p style='color: gray; margin: 0; font-size: 14px;'>Ingresos Extras</p><h3 style='margin: 0; color: #4CAF50;'>${total_ingresos:,.2f}</h3></div>", unsafe_allow_html=True)
-with col_gas:
-    st.markdown(f"<div style='background-color: white; padding: 15px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); text-align: center;'><p style='color: gray; margin: 0; font-size: 14px;'>Gastos</p><h3 style='margin: 0; color: #F44336;'>${total_gastos:,.2f}</h3></div>", unsafe_allow_html=True)
+# 2. BOTONES MEDIOS: Ingresos y Gastos
+col1, col2 = st.columns(2)
+with col1:
+    texto_ingresos = f"↓ INGRESOS\n${total_ingresos:,.2f}"
+    if st.button(texto_ingresos, type="secondary", use_container_width=True):
+        ingreso_dialog()
 
-# 3. Tarjeta Azul
+with col2:
+    texto_gastos = f"↑ GASTOS\n${total_gastos:,.2f}"
+    if st.button(texto_gastos, type="primary", use_container_width=True):
+        gasto_dialog()
+
+# 3. CUADRO INFERIOR: Saldo Total (Visualización)
 st.markdown(f"""
-<div style="background-color: #007bff; color: white; padding: 25px; border-radius: 15px; margin-top: 20px; margin-bottom: 25px; box-shadow: 0 4px 6px rgba(0,123,255,0.3);">
-    <p style="margin: 0; font-size: 16px; opacity: 0.9;">Saldo Actual</p>
-    <h1 style="margin: 0; font-size: 42px;">${saldo_actual:,.2f}</h1>
+<div class="total-card">
+    <div class="total-label">Saldo Total Disponible</div>
+    <div class="total-value">${saldo_total:,.2f}</div>
 </div>
 """, unsafe_allow_html=True)
 
-# 4. Transacciones Recientes
-st.markdown("**Transacciones Recientes**")
+# 4. HISTORIAL RÁPIDO (Opcional, para que veas lo que introdujiste)
 if not df_all.empty:
-    df_recent = df_all.sort_values(by='id', ascending=False).head(5)
+    st.markdown("<p style='text-align: center; color: gray; font-size: 14px;'>Últimos movimientos</p>", unsafe_allow_html=True)
+    df_recent = df_all.sort_values(by='id', ascending=False).head(3)
     for index, row in df_recent.iterrows():
-        t_date = pd.to_datetime(row['date']).strftime("%d %b %Y")
-        if row['type'] == 'Gasto':
-            color = "#dc3545"
-            signo = "-"
-            icono = "↑"
-        else:
-            color = "#28a745"
-            signo = "+"
-            icono = "↓"
-            
+        color = "#dc3545" if row['type'] == 'Gasto' else "#28a745"
+        signo = "-" if row['type'] == 'Gasto' else "+"
         st.markdown(f"""
-        <div style="background-color: white; padding: 15px; border-radius: 10px; margin-bottom: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center;">
-            <div style="display: flex; align-items: center; gap: 15px;">
-                <div style="color: {color}; background-color: {color}15; border-radius: 50%; width: 35px; height: 35px; display: flex; align-items: center; justify-content: center; font-weight: bold;">{icono}</div>
-                <div>
-                    <div style="font-weight: 600; font-size: 15px; color: #333;">{row['category']}</div>
-                    <div style="color: #888; font-size: 13px;">{row['note'] or 'Sin descripción'} • {t_date}</div>
-                </div>
-            </div>
-            <div style="color: {color}; font-weight: bold; font-size: 16px;">
-                {signo}${row['amount']:,.2f}
-            </div>
+        <div style="border-bottom: 1px solid #eee; padding: 10px 0; display: flex; justify-content: space-between;">
+            <span style="color: #555;">{row['category']} <small>({row['note']})</small></span>
+            <span style="color: {color}; font-weight: bold;">{signo}${row['amount']:,.2f}</span>
         </div>
         """, unsafe_allow_html=True)
-else:
-    st.info("No hay transacciones registradas aún.")
-
-st.write("---")
-
-# 5. BOTONES ESTILO APP
-col_btn1, col_btn2 = st.columns(2)
-with col_btn1:
-    # Este usa type="secondary", el CSS lo vuelve VERDE
-    if st.button("↓ Ingresos", type="secondary", use_container_width=True):
-        ingreso_dialog()
-with col_btn2:
-    # Este usa type="primary", el CSS lo vuelve ROJO
-    if st.button("↑ Gastos", type="primary", use_container_width=True):
-        gasto_dialog()
