@@ -66,14 +66,6 @@ st.markdown("""
     }
     .account-name { font-size: 12px; color: #666; font-weight: 600; text-transform: uppercase; }
     .account-balance { font-size: 20px; font-weight: 700; color: #333; }
-    
-    .mom-card {
-        background-color: white;
-        border-radius: 12px;
-        padding: 12px;
-        border: 1px solid #eee;
-        text-align: center;
-    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -92,7 +84,6 @@ def get_db():
     try:
         res = requests.get(URL, headers={"X-Master-Key": API_KEY})
         data = res.json().get('record', {})
-        # Reparación de llaves faltantes
         if "transactions" not in data: data["transactions"] = []
         if "recurrentes" not in data: data["recurrentes"] = []
         default_set = {"sueldo": 0.0, "presupuesto": 0.0, "cuentas": ["Efectivo", "Banco"]}
@@ -120,11 +111,18 @@ def add_trans(t_type, cat, amt, note, account, date_str=None):
     })
     save_db(db)
 
-# --- PROCESAMIENTO ---
+# --- PROCESAMIENTO (SOLUCIÓN AL KEYERROR) ---
 df = pd.DataFrame(db["transactions"])
+columnas_necesarias = ["id", "date", "type", "category", "amount", "note", "account"]
+
 if df.empty:
-    df = pd.DataFrame(columns=["id", "date", "type", "category", "amount", "note", "account"])
+    df = pd.DataFrame(columns=columnas_necesarias)
 else:
+    # Si existen datos pero faltan columnas (como 'account'), las creamos con valor por defecto
+    for col in columnas_necesarias:
+        if col not in df.columns:
+            df[col] = "Banco" if col == "account" else "N/A"
+    
     df['date'] = pd.to_datetime(df['date'])
     df['amount'] = pd.to_numeric(df['amount'], errors='coerce').fillna(0.0)
 
@@ -167,21 +165,22 @@ with tab1:
     st.markdown(f'<div class="total-card"><div style="opacity:0.8">Saldo Neto Total</div><div class="total-value">${saldo_neto:,.2f}</div></div>', unsafe_allow_html=True)
     
     col_b1, col_b2 = st.columns(2)
-    if col_b1.button("↑ GASTO\nRegistrar", type="primary", use_container_width=True): trans_dialog("Gasto")
-    if col_b2.button("↓ INGRESO\nRegistrar", type="secondary", use_container_width=True): trans_dialog("Ingreso")
+    with col_b1:
+        if st.button("↑ GASTO\nRegistrar", type="primary", use_container_width=True): trans_dialog("Gasto")
+    with col_b2:
+        if st.button("↓ INGRESO\nRegistrar", type="secondary", use_container_width=True): trans_dialog("Ingreso")
     
     if st.button("⚙️ AJUSTES Y METAS\nConfigurar App", type="tertiary", use_container_width=True): config_dialog()
 
     st.write("### 🏦 Mis Cuentas")
     cuentas = db["settings"].get("cuentas", ["Efectivo", "Banco"])
     
-    # --- FIX: Generación limpia de HTML para evitar que se vea el código ---
+    # Generación de HTML ultra-limpia
     html_cuentas = '<div style="display: flex; flex-wrap: wrap; justify-content: space-between;">'
     for acc in cuentas:
         i_acc = df[(df['type']=='Ingreso') & (df['account']==acc)]['amount'].sum()
         g_acc = df[(df['type']=='Gasto') & (df['account']==acc)]['amount'].sum()
         bal = (sueldo if acc == "Banco" else 0) + i_acc - g_acc
-        # Eliminamos saltos de línea y espacios extras en el string
         card = f'<div class="account-card"><div class="account-name">{acc}</div><div class="account-balance">${bal:,.2f}</div></div>'
         html_cuentas += card
     html_cuentas += '</div>'
@@ -190,7 +189,10 @@ with tab1:
 
 with tab2:
     st.subheader("Movimientos del Mes")
-    st.dataframe(df_mes.sort_values('date', ascending=False), use_container_width=True, hide_index=True)
+    if not df_mes.empty:
+        st.dataframe(df_mes.sort_values('date', ascending=False), use_container_width=True, hide_index=True)
+    else:
+        st.info("No hay datos este mes.")
 
 with tab3:
     if not df_mes[df_mes['type']=='Gasto'].empty:
