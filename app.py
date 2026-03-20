@@ -1,138 +1,127 @@
 import streamlit as st
 
-# Configuración para que el diseño sea centrado y limpio
-st.set_page_config(page_title="Dashboard Financiero", layout="centered")
+# Configuración de página para centrar el contenido como en un celular
+st.set_page_config(page_title="UI Design Skeleton", layout="centered")
 
-# --- CSS PERSONALIZADO PARA COPIAR EL DISEÑO ---
+# --- CSS PARA EL DISEÑO DE TARJETAS (CARDS) ---
 st.markdown("""
     <style>
-    /* Fondo general gris muy claro */
-    .stApp {
-        background-color: #F2F4F7;
-    }
-    
-    /* Estilo para las tarjetas blancas (2 y 3) */
-    .card-small {
+    /* Fondo de la aplicación */
+    .stApp { background-color: #F7F9FC; }
+
+    /* Tarjeta Blanca (2, 3 y Transacciones) */
+    .card-white {
         background-color: white;
         padding: 15px;
-        border-radius: 18px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-        border: 1px solid #E6E8EB;
-        height: 110px;
-        position: relative;
-    }
-
-    /* Tarjeta Azul Grande (4) */
-    .card-blue {
-        background-color: #0077B6;
-        color: white;
-        padding: 20px;
         border-radius: 20px;
-        margin: 15px 0px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        border: 1px solid #EDF0F5;
+        margin-bottom: 10px;
         position: relative;
-        min-height: 120px;
     }
 
-    /* Botones inferiores (6 y 7) */
+    /* Tarjeta Azul (4) */
+    .card-blue {
+        background-color: #0078D4;
+        color: white;
+        padding: 25px;
+        border-radius: 22px;
+        margin: 15px 0;
+        position: relative;
+    }
+
+    /* Botones de acción (6 y 7) */
     .btn-action {
-        padding: 15px;
-        border-radius: 12px;
+        color: white;
+        padding: 16px;
+        border-radius: 14px;
         text-align: center;
         font-weight: bold;
-        color: white;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 8px;
+        font-size: 1.1rem;
     }
 
-    /* Tipografías y Colores */
-    .label-secondary { color: #8E8E93; font-size: 0.85rem; }
-    .price-black { color: #1C1C1E; font-size: 1.2rem; font-weight: 700; margin: 5px 0; }
-    .price-red { color: #FF3B30; font-size: 0.9rem; font-weight: 600; }
-    .badge-number { 
-        position: absolute; right: 15px; bottom: 15px; 
-        font-size: 1.5rem; color: #E5E5EA; font-weight: bold; 
+    /* Texto y Referencias */
+    .label-muted { color: #8E8E93; font-size: 0.8rem; }
+    .val-main { font-weight: 700; font-size: 1.2rem; color: #1C1C1E; }
+    .ref-num { 
+        position: absolute; right: 15px; bottom: 10px; 
+        font-size: 1.4rem; color: #D1D1D6; font-weight: 800; opacity: 0.5;
     }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 1. CABECERA (Billetera) ---
+# --- 1. ENCABEZADO / BILLETERA ---
 with st.container():
     c1, c2 = st.columns([1, 4])
     with c1:
-        # Icono de billetera simulado
-        st.markdown("""<div style="background:#E1F0FF; padding:15px; border-radius:12px; text-align:center;">
-            <span style="font-size:1.5rem;">💳</span></div>""", unsafe_allow_html=True)
+        st.markdown("""<div style="background:#0078D4; color:white; padding:15px; border-radius:12px; text-align:center;">💰</div>""", unsafe_allow_html=True)
     with c2:
-        st.markdown("<b>1,161</b><br><span class='price-red'>$-22.99</span> <span style='color:#E5E5EA; font-weight:bold; float:right;'>1</span>", unsafe_allow_html=True)
+        st.markdown("**1,161**<br><span style='color:#FF3B30;'>$-22.99</span> <span style='float:right; opacity:0.3;'>1</span>", unsafe_allow_html=True)
 
-st.write(" ")
+st.write("---")
 
-# --- 2 y 3. CUADRÍCULA DE INGRESOS Y GASTOS (Juntos) ---
-# Usamos col_gap="small" para que estén bien pegados
-col2, col3 = st.columns(2)
+# --- 2 y 3. CUADRÍCULA LADO A LADO (Ingresos y Gastos) ---
+# Usamos columnas para que 2 esté a la izquierda y 3 a la derecha
+col_left, col_right = st.columns(2, gap="small")
 
-with col2:
-    st.markdown(f"""
-        <div class="card-small">
-            <span style="color: #34C759;">↓</span> <span class="label-secondary">Ingresos</span><br>
-            <div class="price-black">$0.00</div>
-            <span class="label-secondary">Este Mes</span>
-            <div class="badge-number">2</div>
+with col_left:
+    st.markdown("""
+        <div class="card-white">
+            <span style="color:#34C759;">↓</span> <span class="label-muted">Ingresos</span><br>
+            <div class="val-main">$0.00</div>
+            <span class="label-muted">Este Mes</span>
+            <div class="ref-num">2</div>
         </div>
     """, unsafe_allow_html=True)
 
-with col3:
-    st.markdown(f"""
-        <div class="card-small">
-            <span style="color: #FF3B30;">↑</span> <span class="label-secondary">Gastos</span><br>
-            <div class="price-black">$22.99</div>
-            <span class="label-secondary">Este Mes</span>
-            <div class="badge-number">3</div>
+with col_right:
+    st.markdown("""
+        <div class="card-white">
+            <span style="color:#FF3B30;">↑</span> <span class="label-muted">Gastos</span><br>
+            <div class="val-main">$22.99</div>
+            <span class="label-muted">Este Mes</span>
+            <div class="ref-num">3</div>
         </div>
     """, unsafe_allow_html=True)
 
-# --- 4. SALDO ACTUAL ---
+# --- 4. SALDO ACTUAL (CONTENEDOR AZUL) ---
 st.markdown("""
     <div class="card-blue">
-        <span style="font-size: 0.9rem; opacity: 0.8;">Saldo Actual</span><br>
-        <span style="font-size: 2.5rem; font-weight: bold;">$-22.99</span>
-        <div style="position: absolute; right: 30px; top: 35%; font-size: 2rem; opacity: 0.5;">4</div>
+        <span style="opacity: 0.8; font-size: 0.9rem;">Saldo Actual</span><br>
+        <span style="font-size: 2.2rem; font-weight: bold;">$-22.99</span>
+        <div style="position: absolute; right: 25px; top: 30%; font-size: 2.5rem; opacity: 0.3;">4</div>
     </div>
 """, unsafe_allow_html=True)
 
 # --- 5. TRANSACCIONES RECIENTES ---
 st.markdown("""
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-        <b style="font-size: 1.1rem;">Transacciones Recientes</b>
-        <span style="color: #0077B6; font-size: 0.8rem; font-weight: bold;">Ver Todo</span>
+    <div style="display:flex; justify-content:space-between; align-items:center; margin: 15px 0 10px 0;">
+        <b style="font-size:1.1rem;">Transacciones Recientes</b>
+        <span style="color:#0078D4; font-size:0.85rem; font-weight:bold;">Ver Todo [5]</span>
     </div>
 """, unsafe_allow_html=True)
 
-# Lista de transacciones (Esqueleto)
-for _ in range(3):
-    st.markdown("""
-        <div style="background:white; padding:12px; border-radius:15px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; border: 1px solid #F0F0F0;">
-            <div style="display:flex; align-items:center; gap:10px;">
-                <div style="background:#FFE7E7; padding:8px; border-radius:50%;">⬆️</div>
-                <div>
-                    <b>Entertainment</b><br><span style="font-size:0.7rem; color:grey;">Netflix / GP</span>
-                </div>
+# Mock de transacciones
+for label, price, date in [("Entertainment", "-$11.00", "19 Mar"), ("Netflix", "-$8.99", "19 Mar")]:
+    st.markdown(f"""
+        <div class="card-white" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <div style="display:flex; align-items:center; gap:12px;">
+                <div style="background:#F2F2F7; padding:10px; border-radius:50%;">🎬</div>
+                <div><b>{label}</b><br><span class="label-muted">GP</span></div>
             </div>
             <div style="text-align:right;">
-                <span style="color:#FF3B30; font-weight:bold;">-$8.99</span><br><span style="font-size:0.7rem; color:grey;">19 Mar 2026</span>
+                <span style="color:#FF3B30; font-weight:bold;">{price}</span><br>
+                <span class="label-muted">{date}</span>
             </div>
         </div>
     """, unsafe_allow_html=True)
-st.markdown("<div style='text-align:center; color:#E5E5EA; font-weight:bold;'>5</div>", unsafe_allow_html=True)
 
-# --- 6 y 7. BOTONES DE ACCIÓN ---
-st.write(" ")
-col6, col7 = st.columns(2)
+# --- 6 y 7. BOTONES INFERIORES LADO A LADO ---
+st.write("")
+b_left, b_right = st.columns(2, gap="small")
 
-with col6:
-    st.markdown('<div class="btn-action" style="background-color: #34C759;">↓ Ingresos <span style="opacity:0.5;">6</span></div>', unsafe_allow_html=True)
+with b_left:
+    st.markdown('<div class="btn-action" style="background:#34C759;">↓ Ingresos [6]</div>', unsafe_allow_html=True)
 
-with col7:
-    st.markdown('<div class="btn-action" style="background-color: #FF3B30;">↑ Gastos <span style="opacity:0.5;">7</span></div>', unsafe_allow_html=True)
+with b_right:
+    st.markdown('<div class="btn-action" style="background:#FF3B30;">↑ Gastos [7]</div>', unsafe_allow_html=True)
