@@ -1,3 +1,9 @@
+import sys
+import os
+# --- CORRECCIÓN DE IMPORTACIÓN ---
+# Agregamos la ruta raíz al sistema para que Python encuentre la carpeta 'utils'
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 import streamlit as st
 from utils.db_manager import add_transaccion, get_transacciones
 import datetime
@@ -51,7 +57,6 @@ with col_tabla:
             use_container_width=True,
             hide_index=True,
             column_config={
-                "id": None, # Ocultar el ID
                 "monto": st.column_config.NumberColumn(format="$%.2f")
             }
         )
