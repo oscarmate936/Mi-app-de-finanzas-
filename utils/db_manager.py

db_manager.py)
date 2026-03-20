@@ -1,0 +1,42 @@
+import sqlite3
+import pandas as pd
+import os
+
+# Asegurarse de que la carpeta data exista
+os.makedirs('data', exist_ok=True)
+DB_NAME = "data/finanzas.db"
+
+def init_db():
+    """Crea la tabla si no existe."""
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS transacciones (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            fecha TEXT,
+            tipo TEXT,
+            categoria TEXT,
+            monto REAL,
+            descripcion TEXT
+        )
+    ''')
+    conn.commit()
+    conn.close()
+
+def add_transaccion(fecha, tipo, categoria, monto, descripcion):
+    """Añade una nueva transacción a la base de datos."""
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute('''
+        INSERT INTO transacciones (fecha, tipo, categoria, monto, descripcion)
+        VALUES (?, ?, ?, ?, ?)
+    ''', (fecha, tipo, categoria, monto, descripcion))
+    conn.commit()
+    conn.close()
+
+def get_transacciones():
+    """Devuelve todas las transacciones como un DataFrame de Pandas."""
+    conn = sqlite3.connect(DB_NAME)
+    df = pd.read_sql_query("SELECT * FROM transacciones ORDER BY fecha DESC", conn)
+    conn.close()
+    return df
