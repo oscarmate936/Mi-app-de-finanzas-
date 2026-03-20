@@ -4,10 +4,10 @@ from datetime import datetime
 import requests
 import uuid
 
-# --- CONFIGURACIÓN DE PÁGINA ---
+# --- CONFIGURACIÓN ---
 st.set_page_config(page_title="Vault Premium", page_icon="💎", layout="centered")
 
-# --- ESTILOS CSS (DISEÑO PREMIUM ASIMÉTRICO) ---
+# --- ESTILOS CSS (DISEÑO PREMIUM ASIMÉTRICO Y NEO-BENTO) ---
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;800&display=swap');
@@ -16,83 +16,79 @@ st.markdown("""
     header {visibility: hidden;}
     footer {visibility: hidden;}
     [data-testid="stAppViewContainer"] {
-        background: radial-gradient(circle at top right, #1e1b4b, #0f172a);
+        background-color: #0A0C10;
         font-family: 'Plus Jakarta Sans', sans-serif;
-        color: #f8fafc;
+        color: #E2E8F0;
     }
-    .main .block-container { padding-top: 1rem; max-width: 500px; }
+    .main .block-container { padding-top: 2rem; max-width: 500px; }
 
-    /* Tarjeta Principal Asimétrica (Balance) */
-    .hero-card {
-        background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
-        padding: 40px 30px;
-        border-radius: 40px 40px 80px 40px; /* Asimetría en bordes */
+    /* 1. Tarjeta de Balance Principal (Asimétrica) */
+    .balance-card {
+        background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%);
+        padding: 35px 25px;
+        border-radius: 20px 80px 20px 20px; /* Bordes asimétricos */
+        border: 1px solid rgba(255,255,255,0.1);
         margin-bottom: 25px;
-        box-shadow: 0 20px 40px rgba(99, 102, 241, 0.3);
-        position: relative;
-        overflow: hidden;
+        box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
     }
-    .hero-card::after {
-        content: ""; position: absolute; top: -20px; right: -20px;
-        width: 100px; height: 100px; background: rgba(255,255,255,0.1);
-        border-radius: 50%;
-    }
-    .hero-label { font-size: 12px; text-transform: uppercase; letter-spacing: 2px; opacity: 0.8; }
-    .hero-val { font-size: 48px; font-weight: 800; margin: 5px 0; }
+    .balance-label { font-size: 13px; text-transform: uppercase; letter-spacing: 2px; color: #94A3B8; margin-bottom: 5px; }
+    .balance-val { font-size: 42px; font-weight: 800; color: #F8FAFC; letter-spacing: -1px; }
 
-    /* Stat Boxes Asimétricas */
-    .glass-card {
-        background: rgba(255, 255, 255, 0.03);
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.05);
+    /* 2. Stats Bento (Tamaños desiguales) */
+    .stat-card {
+        background: #161B22;
         padding: 20px;
-        border-radius: 24px;
-        margin-bottom: 15px;
-    }
-    .stat-inc { border-left: 4px solid #4ade80; border-radius: 12px 30px 30px 12px; }
-    .stat-exp { border-right: 4px solid #f43f5e; border-radius: 30px 12px 12px 30px; text-align: right; }
-
-    /* Transacciones List */
-    .trans-item {
+        border: 1px solid rgba(255,255,255,0.05);
         display: flex;
-        align-items: center;
+        flex-direction: column;
         justify-content: space-between;
-        padding: 15px;
+    }
+    .inc-card { border-radius: 40px 15px 15px 15px; border-top: 3px solid #10B981; }
+    .exp-card { border-radius: 15px 15px 40px 15px; border-bottom: 3px solid #F43F5E; }
+    
+    .stat-title { font-size: 12px; font-weight: 600; color: #64748B; text-transform: uppercase; }
+    .stat-amt { font-size: 20px; font-weight: 700; margin-top: 10px; }
+
+    /* 3. Lista de Transacciones */
+    .trans-box {
         background: rgba(255, 255, 255, 0.02);
-        border-radius: 20px;
-        margin-bottom: 10px;
-        transition: transform 0.2s;
+        border-radius: 24px;
+        padding: 10px;
+        margin-top: 20px;
     }
-    .trans-item:hover { transform: scale(1.02); background: rgba(255, 255, 255, 0.05); }
+    .trans-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 15px;
+        border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+    .cat-badge {
+        background: #1E293B;
+        padding: 4px 10px;
+        border-radius: 8px;
+        font-size: 11px;
+        font-weight: 600;
+        color: #94A3B8;
+    }
     
-    .icon-box {
-        width: 45px; height: 45px; border-radius: 15px;
-        display: flex; align-items: center; justify-content: center;
-        font-size: 18px;
-    }
-
-    /* Botones Premium */
+    /* Botones Custom */
     div.stButton > button {
-        border-radius: 20px !important;
-        padding: 20px !important;
-        font-weight: 600 !important;
+        border-radius: 18px !important;
+        font-weight: 700 !important;
+        transition: all 0.3s ease !important;
         border: none !important;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
     }
-    div.stButton > button:hover { transform: translateY(-3px); box-shadow: 0 10px 20px rgba(0,0,0,0.2); }
-    
-    /* Botón Ingreso (Verde Neón) */
-    button[key="btn_inc"] { background: #4ade80 !important; color: #064e3b !important; }
-    /* Botón Gasto (Rosa Eléctrico) */
-    button[key="btn_exp"] { background: #f43f5e !important; color: #fff !important; }
-
-    /* Scrollbar */
-    ::-webkit-scrollbar { width: 5px; }
-    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+    /* Botón Ingreso */
+    button[key="btn_ingreso"] { background: #10B981 !important; color: white !important; height: 60px !important; }
+    /* Botón Gasto */
+    button[key="btn_gasto"] { background: #F43F5E !important; color: white !important; height: 60px !important; }
+    /* Botón Sueldo */
+    button[key="btn_sueldo"] { background: #334155 !important; color: #94A3B8 !important; font-size: 12px !important; }
 </style>
 """, unsafe_allow_html=True)
 
-# --- BACKEND ---
+# --- BACKEND (Respetando tu lógica original) ---
 try:
     BIN_ID = st.secrets["bin_id"]
     API_KEY = st.secrets["api_key"]
@@ -121,7 +117,7 @@ db = get_db()
 df = pd.DataFrame(db["transactions"])
 if not df.empty:
     df['date_dt'] = pd.to_datetime(df['date'])
-    df['amount'] = pd.to_numeric(df['amount'])
+    df['amount'] = pd.to_numeric(df['amount']).fillna(0.0)
     mes_actual = datetime.now().month
     df_mes = df[df['date_dt'].dt.month == mes_actual]
 else:
@@ -129,111 +125,121 @@ else:
 
 # Cálculos
 sueldo_base = db["settings"].get("sueldo", 0.0)
-ingresos = df_mes[df_mes['type'] == 'Ingreso']['amount'].sum()
-gastos = df_mes[df_mes['type'] == 'Gasto']['amount'].sum()
-balance_neto = ingresos - gastos
-total_disponible = sueldo_base + (df[df['type']=='Ingreso']['amount'].sum() if not df.empty else 0) - (df[df['type']=='Gasto']['amount'].sum() if not df.empty else 0)
+ingresos_mes = df_mes[df_mes['type'] == 'Ingreso']['amount'].sum()
+gastos_mes = df_mes[df_mes['type'] == 'Gasto']['amount'].sum()
+saldo_total = sueldo_base + (df[df['type']=='Ingreso']['amount'].sum() if not df.empty else 0) - (df[df['type']=='Gasto']['amount'].sum() if not df.empty else 0)
 
-# --- DIÁLOGOS ---
-@st.dialog("⚙️ Ajustes")
-def settings_dialog():
-    s = st.number_input("Salario Base Mensual", value=sueldo_base)
+# --- DIÁLOGOS (ENTRADAS) ---
+@st.dialog("🎯 Definir Presupuesto")
+def sueldo_dialog():
+    s = st.number_input("Salario base inicial", value=sueldo_base, help="Este monto se suma al balance total.")
     if st.button("Actualizar Bóveda", use_container_width=True):
         db["settings"]["sueldo"] = s
         save_db(db); st.rerun()
 
-@st.dialog("➕ Nueva Operación")
-def operation_dialog(tipo):
-    st.markdown(f"### Registro de {tipo}")
-    amt = st.number_input("Cantidad ($)", min_value=0.0, step=10.0)
-    note = st.text_input("Concepto / Nota")
-    cat = st.selectbox("Categoría", ["Fijo", "Comida", "Ocio", "Transporte", "Inversión", "Otro"])
-    if st.button(f"Confirmar {tipo}", use_container_width=True):
+@st.dialog("🚀 Nuevo Ingreso")
+def ingreso_dialog():
+    amt = st.number_input("Monto del ingreso ($)", min_value=0.0)
+    note = st.text_input("¿De qué se trata?", placeholder="Ej: Venta de garage")
+    if st.button("Inyectar Capital", use_container_width=True):
         db["transactions"].append({
             "id": str(uuid.uuid4())[:6], "date": datetime.now().strftime("%Y-%m-%d"),
-            "type": tipo, "category": cat, "amount": amt, "note": note
+            "type": "Ingreso", "category": "Extra", "amount": amt, "note": note
         })
         save_db(db); st.rerun()
 
-# --- INTERFAZ DE USUARIO ---
+@st.dialog("💸 Registrar Gasto")
+def gasto_dialog():
+    cat = st.selectbox("Categoría", ["🍔 Comida", "🎬 Ocio", "🚗 Transporte", "🏠 Hogar", "💡 Servicios", "🌀 Otros"])
+    amt = st.number_input("Monto gastado ($)", min_value=0.0)
+    note = st.text_input("Nota breve", placeholder="Ej: Cena con amigos")
+    if st.button("Confirmar Gasto", use_container_width=True):
+        db["transactions"].append({
+            "id": str(uuid.uuid4())[:6], "date": datetime.now().strftime("%Y-%m-%d"),
+            "type": "Gasto", "category": cat, "amount": amt, "note": note
+        })
+        save_db(db); st.rerun()
 
-# 1. HERO SECTION (Balance Asimétrico)
+# --- INTERFAZ VISUAL ---
+
+# 1. BALANCE PRINCIPAL (Asimétrico)
 st.markdown(f"""
-<div class="hero-card">
-    <div class="hero-label">Balance del Mes</div>
-    <div class="hero-val">${balance_neto:,.2f}</div>
-    <div style="font-size: 14px; opacity: 0.9;">
-        {'+' if balance_neto >= 0 else ''}{ (balance_neto/(sueldo_base if sueldo_base>0 else 1))*100:.1f}% respecto al sueldo
+<div class="balance-card">
+    <div class="balance-label">Disponible Total</div>
+    <div class="balance-val">${saldo_total:,.2f}</div>
+    <div style="color:#10B981; font-size:12px; font-weight:600; margin-top:10px;">
+        ⚡ Bóveda Activa
     </div>
 </div>
 """, unsafe_allow_html=True)
 
-# 2. STATS ASIMÉTRICOS (Layout 2:1 y 1:2)
-c1, c2 = st.columns([2, 1.2])
+# 2. STATS ASIMÉTRICOS (Columna 1:2)
+col_left, col_right = st.columns([1, 1.5])
+
+with col_left:
+    st.markdown(f"""
+    <div class="stat-card inc-card">
+        <div class="stat-title">Ingresos</div>
+        <div class="stat-amt" style="color:#10B981;">+${ingresos_mes:,.0f}</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+with col_right:
+    st.markdown(f"""
+    <div class="stat-card exp-card">
+        <div class="stat-title">Gastos del Mes</div>
+        <div class="stat-amt" style="color:#F43F5E;">-${gastos_mes:,.0f}</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+st.write("<br>", unsafe_allow_html=True)
+
+# 3. BOTONES DE ACCIÓN (Todos son botones que abren diálogos)
+c1, c2 = st.columns(2)
 with c1:
-    st.markdown(f"""
-    <div class="glass-card stat-inc">
-        <div style="color: #4ade80; font-size: 12px; font-weight: 800; text-transform: uppercase;">Ingresos Extra</div>
-        <div style="font-size: 24px; font-weight: 700;">+ ${ingresos:,.2f}</div>
-    </div>
-    """, unsafe_allow_html=True)
-
+    if st.button("✚ INGRESO", key="btn_ingreso", use_container_width=True):
+        ingreso_dialog()
 with c2:
-    st.markdown(f"""
-    <div class="glass-card stat-exp" style="background: rgba(244, 63, 94, 0.05);">
-        <div style="color: #f43f5e; font-size: 12px; font-weight: 800; text-transform: uppercase;">Gastos</div>
-        <div style="font-size: 20px; font-weight: 700;">- ${gastos:,.2f}</div>
-    </div>
-    """, unsafe_allow_html=True)
+    if st.button("➖ GASTO", key="btn_gasto", use_container_width=True):
+        gasto_dialog()
 
-# 3. ACCIONES RÁPIDAS
-st.write(" ")
-col_a, col_b = st.columns(2)
-with col_a:
-    if st.button("✚ INGRESO", key="btn_inc", use_container_width=True):
-        operation_dialog("Ingreso")
-with col_b:
-    if st.button("➖ GASTO", key="btn_exp", use_container_width=True):
-        operation_dialog("Gasto")
+if st.button("⚙️ CONFIGURAR SALARIO BASE", key="btn_sueldo", use_container_width=True):
+    sueldo_dialog()
 
-# 4. TRANSACCIONES (Diseño de lista limpia)
-st.markdown("<br><div style='display:flex; justify-content:space-between; align-items:center;'><h3>Historial</h3><p style='color:#6366f1; font-size:12px;'>Ver todo</p></div>", unsafe_allow_html=True)
+# 4. HISTORIAL PREMIUM
+st.markdown("<h3 style='font-size:18px; margin-top:30px;'>Movimientos Recientes</h3>", unsafe_allow_html=True)
 
 if not df.empty:
-    for _, row in df.sort_values('date', ascending=False).head(8).iterrows():
+    st.markdown('<div class="trans-box">', unsafe_allow_html=True)
+    for _, row in df.sort_values('date', ascending=False).head(10).iterrows():
         is_inc = row['type'] == 'Ingreso'
-        icon = "💸" if is_inc else "🛍️"
-        color = "#4ade80" if is_inc else "#f43f5e"
-        bg_icon = "rgba(74, 222, 128, 0.1)" if is_inc else "rgba(244, 63, 94, 0.1)"
+        color = "#10B981" if is_inc else "#F43F5E"
+        prefix = "+" if is_inc else "-"
         
         st.markdown(f"""
-        <div class="trans-item">
-            <div style="display: flex; align-items: center; gap: 15px;">
-                <div class="icon-box" style="background: {bg_icon}; color: {color};">{icon}</div>
-                <div>
-                    <div style="font-weight: 600; font-size: 14px;">{row['category']}</div>
-                    <div style="font-size: 11px; opacity: 0.5;">{row['note']} • {row['date']}</div>
-                </div>
+        <div class="trans-row">
+            <div>
+                <span class="cat-badge">{row['category']}</span>
+                <div style="font-size:14px; font-weight:600; margin-top:4px;">{row['note']}</div>
+                <div style="font-size:10px; color:#475569;">{row['date']}</div>
             </div>
-            <div style="text-align: right;">
-                <div style="font-weight: 700; color: {color};">{'+' if is_inc else '-'}${row['amount']:,.2f}</div>
+            <div style="text-align:right;">
+                <div style="color:{color}; font-weight:800; font-size:16px;">{prefix}${row['amount']:,.2f}</div>
             </div>
         </div>
         """, unsafe_allow_html=True)
         
-        # Eliminar muy pequeño abajo
-        if st.button(f"Borrar {row['id']}", key=f"del_{row['id']}", type="secondary"):
+        # Botón de eliminar (Mantenido por lógica)
+        if st.button(f"🗑️", key=f"del_{row['id']}", help="Eliminar registro"):
             db["transactions"] = [t for t in db["transactions"] if t["id"] != row['id']]
             save_db(db); st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
 else:
-    st.info("Bóveda vacía. Registra tu primera transacción.")
+    st.info("No hay movimientos registrados.")
 
-# 5. FOOTER (Información de Salario Real)
-st.markdown("---")
-cf1, cf2 = st.columns([1, 1])
-with cf1:
-    st.markdown(f"**Efectivo Total:** <span style='color:#6366f1'>${total_disponible:,.2f}</span>", unsafe_allow_html=True)
-with cf2:
-    if st.button("⚙️ Configuración", use_container_width=True):
-        settings_dialog()
-
+# Footer asimétrico
+st.markdown(f"""
+<div style="margin-top:50px; text-align:center; opacity:0.3; font-size:10px; letter-spacing:3px;">
+    VAULT PREMIUM v2.0 • {datetime.now().year}
+</div>
+""", unsafe_allow_html=True)
