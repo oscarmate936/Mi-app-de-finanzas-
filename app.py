@@ -225,41 +225,63 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 
-# 5. HISTORIAL DE TRANSACCIONES
-st.subheader("Transacciones Recientes")
-tab1, tab2 = st.tabs(["Movimientos", "Resumen"])
+# ==========================================
+# 5. HISTORIAL DE TRANSACCIONES Y GRÁFICOS (MODIFICADO)
+# ==========================================
+st.write("") # Espaciador
+tab1, tab2, tab3 = st.tabs(["📝 Historial", "📊 Gráficos", "📋 Resumen"])
 
 with tab1:
     if st.session_state.transacciones.empty:
-        st.write("No hay transacciones registradas.")
+        st.info("No hay transacciones registradas todavía.")
     else:
         df_sorted = st.session_state.transacciones.sort_values(by='Fecha', ascending=False)
         for index, row in df_sorted.iterrows():
-            with st.container():
-                col_icono, col_info, col_monto, col_del = st.columns([1, 4, 2, 1])
+            # Utilizamos st.container con borde para crear la ilusión de una tarjeta nativa e impecable
+            with st.container(border=True):
+                col_icono, col_info, col_monto, col_del = st.columns([1, 4, 3, 1])
+                
                 with col_icono:
                     if row['Tipo'] == 'Gasto':
-                        st.markdown("<div style='background:#ffe3e3; color:#fa5252; border-radius:50%; width:35px; height:35px; display:flex; align-items:center; justify-content:center; font-weight:bold; margin-top:5px;'>↑</div>", unsafe_allow_html=True)
+                        st.markdown("<div style='background:#ffe3e3; color:#fa5252; border-radius:12px; width:45px; height:45px; display:flex; align-items:center; justify-content:center; font-size:20px; margin-top:5px;'>📉</div>", unsafe_allow_html=True)
                     else:
-                        st.markdown("<div style='background:#d3f9d8; color:#20c997; border-radius:50%; width:35px; height:35px; display:flex; align-items:center; justify-content:center; font-weight:bold; margin-top:5px;'>↓</div>", unsafe_allow_html=True)
+                        st.markdown("<div style='background:#d3f9d8; color:#20c997; border-radius:12px; width:45px; height:45px; display:flex; align-items:center; justify-content:center; font-size:20px; margin-top:5px;'>📈</div>", unsafe_allow_html=True)
+                
                 with col_info:
-                    st.markdown(f"<div style='font-weight:600; font-size:14px; margin-bottom:-5px;'>{row['Categoría']}</div>", unsafe_allow_html=True)
-                    st.markdown(f"<div style='font-size:12px; color:gray;'>{row['Descripción']} • {row['Fecha'].strftime('%d %b')}</div>", unsafe_allow_html=True)
+                    st.markdown(f"<div style='font-weight:700; font-size:16px; margin-bottom:-2px; color:#343a40;'>{row['Categoría']}</div>", unsafe_allow_html=True)
+                    st.markdown(f"<div style='font-size:13px; color:#868e96;'>{row['Descripción']} • {row['Fecha'].strftime('%d %b')}</div>", unsafe_allow_html=True)
+                
                 with col_monto:
-                    color = "red" if row['Tipo'] == 'Gasto' else "green"
+                    color = "#fa5252" if row['Tipo'] == 'Gasto' else "#20c997"
                     signo = "-" if row['Tipo'] == 'Gasto' else "+"
-                    st.markdown(f"<div style='color:{color}; font-weight:bold; text-align:right; margin-top:8px;'>{signo}${row['Monto']:.2f}</div>", unsafe_allow_html=True)
+                    st.markdown(f"<div style='color:{color}; font-weight:800; font-size:18px; text-align:right; margin-top:12px;'>{signo}${row['Monto']:.2f}</div>", unsafe_allow_html=True)
+                
                 with col_del:
-                    if st.button("🗑️", key=f"del_{row['ID']}", help="Eliminar"):
+                    st.write("") # Pequeño espaciador para alinear el botón
+                    if st.button("🗑️", key=f"del_{row['ID']}", help="Eliminar registro"):
                         st.session_state.transacciones = st.session_state.transacciones[st.session_state.transacciones['ID'] != row['ID']]
                         st.rerun()
-            st.markdown("<hr style='margin: 5px 0; opacity: 0.1;'>", unsafe_allow_html=True)
-            
+
 with tab2:
+    st.markdown("<h4 style='color: #343a40; margin-bottom: 20px;'>Tus Gastos por Día</h4>", unsafe_allow_html=True)
+    df_gastos = st.session_state.transacciones[st.session_state.transacciones['Tipo'] == 'Gasto']
+    
+    if not df_gastos.empty:
+        # Agrupamos los montos de gasto por fecha
+        gastos_diarios = df_gastos.groupby('Fecha')['Monto'].sum().reset_index()
+        gastos_diarios.set_index('Fecha', inplace=True)
+        
+        # Mostramos el gráfico de barras nativo
+        st.bar_chart(gastos_diarios, color="#fa5252", use_container_width=True)
+    else:
+        st.success("¡Excelente! Aún no tienes gastos registrados para graficar.")
+
+with tab3:
+    # Conservé tu resumen original en una tercera pestaña para que no perdieras la funcionalidad
     st.info(f"💰 **Total Dinero Restante:** ${saldo_actual:,.2f}")
-    st.write(f"Pago Fijo Base: ${st.session_state.pago_fijo:,.2f}")
-    st.write(f"Total Ingresos Extra: ${total_ingresos:,.2f}")
-    st.write(f"Total Gastado: ${total_gastos:,.2f}")
+    st.write(f"Pago Fijo Base: **${st.session_state.pago_fijo:,.2f}**")
+    st.write(f"Total Ingresos Extra: **${total_ingresos:,.2f}**")
+    st.write(f"Total Gastado: **${total_gastos:,.2f}**")
 
 st.write("")
 
