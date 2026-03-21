@@ -1,4 +1,4 @@
-import streamlit as st
+Import streamlit as st
 import pandas as pd
 from datetime import datetime
 import requests # <-- NUEVO: Para conectarnos a JSONBin
@@ -7,10 +7,8 @@ import requests # <-- NUEVO: Para conectarnos a JSONBin
 st.set_page_config(page_title="CashBook", page_icon="💳", layout="centered")
 
 # --- CONFIGURACIÓN JSONBIN ---
-# Leemos las claves de forma segura desde los secrets de Streamlit
-JSONBIN_KEY = st.secrets["JSONBIN_KEY"]
-JSONBIN_BIN_ID = st.secrets["JSONBIN_BIN_ID"]
-
+JSONBIN_KEY = "$2a$10$uGJHNDV9ckIhDrIMXIRzHOmemF1tr9LFHNstzIjMtjMUP7AxKbAJS"
+JSONBIN_BIN_ID = "69bd5fa2aa77b81da901cfe3"
 JSONBIN_URL = f"https://api.jsonbin.io/v3/b/{JSONBIN_BIN_ID}"
 JSONBIN_HEADERS = {
     "Content-Type": "application/json",
