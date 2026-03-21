@@ -170,7 +170,19 @@ def modal_ingreso():
 @st.dialog("↑ Registrar Nuevo Gasto")
 def modal_gasto():
     monto = st.number_input("Monto del Gasto ($)", min_value=0.1, step=5.0)
-    cat = st.selectbox("Categoría", ["Entertainment", "Comida", "Transporte", "Servicios", "Otros"])
+    
+    # --- CATEGORÍAS REDISEÑADAS Y EN ESPAÑOL ---
+    cat = st.selectbox("Categoría", [
+        "Alimentación", 
+        "Transporte", 
+        "Servicios Básicos", 
+        "Vivienda", 
+        "Entretenimiento", 
+        "Salud", 
+        "Educación", 
+        "Otros"
+    ])
+    
     desc = st.text_input("Descripción (Ej. Netflix, Gasolina)")
     fecha = st.date_input("Fecha del gasto")
     if st.button("Realmente Agregar Gasto", use_container_width=True, type="primary"):
@@ -226,7 +238,7 @@ st.markdown(f"""
 
 
 # ==========================================
-# 5. BOTONES DE ACCIÓN (Ahora arriba de las pestañas)
+# 5. BOTONES DE ACCIÓN 
 # ==========================================
 
 # Marcador para avisarle al CSS que aplique el diseño "Lado a Lado" a las siguientes columnas
@@ -249,7 +261,7 @@ st.markdown("<hr style='margin: 30px 0 20px 0; opacity: 0.2;'>", unsafe_allow_ht
 
 
 # ==========================================
-# 6. HISTORIAL DE TRANSACCIONES Y GRÁFICOS (Ahora abajo)
+# 6. HISTORIAL DE TRANSACCIONES Y GRÁFICOS (REDISEÑO PROFESIONAL)
 # ==========================================
 
 tab1, tab2, tab3 = st.tabs(["📝 Historial", "📊 Gráficos", "📋 Resumen"])
@@ -259,27 +271,43 @@ with tab1:
         st.info("No hay transacciones registradas todavía.")
     else:
         df_sorted = st.session_state.transacciones.sort_values(by='Fecha', ascending=False)
+        
+        # --- MAPEO PROFESIONAL DE ÍCONOS POR CATEGORÍA ---
+        iconos_cat = {
+            "Alimentación": "🍽️",
+            "Transporte": "🚗",
+            "Servicios Básicos": "⚡",
+            "Vivienda": "🏠",
+            "Entretenimiento": "🎫",
+            "Salud": "⚕️",
+            "Educación": "📚",
+            "Ingreso Extra": "💰",
+            "Otros": "📌"
+        }
+
         for index, row in df_sorted.iterrows():
             with st.container(border=True):
-                col_icono, col_info, col_monto, col_del = st.columns([1, 4, 3, 1])
+                col_icono, col_info, col_monto, col_del = st.columns([1, 4, 3, 1], vertical_alignment="center")
+                
+                icono = iconos_cat.get(row['Categoría'], "💳")
                 
                 with col_icono:
-                    if row['Tipo'] == 'Gasto':
-                        st.markdown("<div style='background:#ffe3e3; color:#fa5252; border-radius:12px; width:45px; height:45px; display:flex; align-items:center; justify-content:center; font-size:20px; margin-top:5px;'>📉</div>", unsafe_allow_html=True)
-                    else:
-                        st.markdown("<div style='background:#d3f9d8; color:#20c997; border-radius:12px; width:45px; height:45px; display:flex; align-items:center; justify-content:center; font-size:20px; margin-top:5px;'>📈</div>", unsafe_allow_html=True)
+                    st.markdown(f"""
+                    <div style='background-color: #f8f9fa; border: 1px solid #e9ecef; border-radius: 50%; width: 46px; height: 46px; display: flex; align-items: center; justify-content: center; font-size: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.04);'>
+                        {icono}
+                    </div>
+                    """, unsafe_allow_html=True)
                 
                 with col_info:
-                    st.markdown(f"<div style='font-weight:700; font-size:16px; margin-bottom:-2px; color:#343a40;'>{row['Categoría']}</div>", unsafe_allow_html=True)
-                    st.markdown(f"<div style='font-size:13px; color:#868e96;'>{row['Descripción']} • {row['Fecha'].strftime('%d %b')}</div>", unsafe_allow_html=True)
+                    st.markdown(f"<div style='font-family: system-ui, sans-serif; font-weight: 700; font-size: 15px; color: #212529; margin-bottom: 2px;'>{row['Categoría']}</div>", unsafe_allow_html=True)
+                    st.markdown(f"<div style='font-family: system-ui, sans-serif; font-size: 13px; color: #868e96;'>{row['Descripción']} • {row['Fecha'].strftime('%d %b %Y')}</div>", unsafe_allow_html=True)
                 
                 with col_monto:
                     color = "#fa5252" if row['Tipo'] == 'Gasto' else "#20c997"
                     signo = "-" if row['Tipo'] == 'Gasto' else "+"
-                    st.markdown(f"<div style='color:{color}; font-weight:800; font-size:18px; text-align:right; margin-top:12px;'>{signo}${row['Monto']:.2f}</div>", unsafe_allow_html=True)
+                    st.markdown(f"<div style='font-family: monospace, sans-serif; color: {color}; font-weight: 800; font-size: 17px; text-align: right; letter-spacing: -0.5px;'>{signo}${row['Monto']:,.2f}</div>", unsafe_allow_html=True)
                 
                 with col_del:
-                    st.write("") # Pequeño espaciador para alinear el botón
                     if st.button("🗑️", key=f"del_{row['ID']}", help="Eliminar registro"):
                         st.session_state.transacciones = st.session_state.transacciones[st.session_state.transacciones['ID'] != row['ID']]
                         st.rerun()
@@ -303,4 +331,3 @@ with tab3:
     st.write(f"Pago Fijo Base: **${st.session_state.pago_fijo:,.2f}**")
     st.write(f"Total Ingresos Extra: **${total_ingresos:,.2f}**")
     st.write(f"Total Gastado: **${total_gastos:,.2f}**")
-
