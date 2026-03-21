@@ -5,13 +5,13 @@ from datetime import datetime
 # --- CONFIGURACIÓN ---
 st.set_page_config(page_title="CashBook", page_icon="💳", layout="centered")
 
-# --- CSS AVANZADO (Apariencia de App Móvil Nativa) ---
+# --- CSS AVANZADO (Apariencia de App Móvil Nativa y Botones Rediseñados) ---
 st.markdown("""
 <style>
-    /* Fondo general más claro para que resalten las tarjetas */
+    /* Fondo general más claro */
     .stApp { background-color: #f8f9fa; }
     
-    /* Contenedor Flex para forzar lado a lado en móviles */
+    /* Contenedor Flex para forzar lado a lado en móviles (Tarjetas superiores) */
     .flex-container {
         display: flex;
         justify-content: space-between;
@@ -19,24 +19,24 @@ st.markdown("""
         margin-bottom: 15px;
     }
     
-    /* Nueva Tarjeta Pago Fijo (Gris oscuro profesional) */
+    /* Tarjeta Pago Fijo (Gris oscuro) */
     .card-pago-fijo {
         background: linear-gradient(135deg, #343a40, #212529);
         color: white;
         border-radius: 20px;
         padding: 20px;
-        box-shadow: 0 8px 20px rgba(33, 37, 41, 0.25);
+        box-shadow: 0 8px 20px rgba(33, 37, 41, 0.15);
         margin-bottom: 10px;
         text-align: center;
     }
     
-    /* Estilos de Tarjetas Métricas */
+    /* Estilos de Tarjetas Métricas Blancas */
     .card-metric {
         flex: 1;
         background-color: #ffffff;
         border-radius: 20px;
         padding: 20px 15px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.03);
         border: 1px solid #f1f3f5;
     }
     .metric-title { font-size: 14px; font-weight: 600; color: #868e96; margin-bottom: 8px;}
@@ -51,7 +51,7 @@ st.markdown("""
         color: white;
         border-radius: 20px;
         padding: 25px 20px;
-        box-shadow: 0 8px 20px rgba(0,123,255,0.25);
+        box-shadow: 0 8px 20px rgba(0,123,255,0.2);
         margin-bottom: 30px;
     }
     
@@ -61,14 +61,59 @@ st.markdown("""
         padding: 15px;
         border-radius: 15px;
         margin-bottom: 10px;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+        box-shadow: 0 2px 5px rgba(0,0,0,0.01);
         border: 1px solid #f1f3f5;
     }
+
+    /* === NUEVO CSS PARA BOTONES INFERIORES PROFESIONALES === */
     
-    /* Forzar botones inferiores a estar en la misma línea */
-    div[data-testid="column"] {
-        min-width: 45% !important;
+    /* Contenedor para botones inferiores (forzar lado a lado en móvil) */
+    .flex-buttons {
+        display: flex;
+        justify-content: space-between;
+        gap: 15px;
+        margin-top: 20px;
+        margin-bottom: 20px;
     }
+
+    /* Estilo base para los "botones-tarjeta" */
+    .btn-card {
+        flex: 1; /* Ocupan mitad y mitad */
+        border-radius: 15px;
+        padding: 15px;
+        text-align: center;
+        font-weight: 700;
+        font-size: 16px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+        border: none;
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+    }
+
+    /* Efecto al pasar el mouse (hover) y click */
+    .btn-card:hover { transform: translateY(-2px); box-shadow: 0 6px 15px rgba(0,0,0,0.1); }
+    .btn-card:active { transform: translateY(1px); box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+
+    /* Botón INGRESO (Verde - Izquierda) */
+    .btn-ingreso {
+        background: linear-gradient(135deg, #20c997, #12b886);
+    }
+
+    /* Botón GASTO (Rojo - Derecha) */
+    .btn-gasto {
+        background: linear-gradient(135deg, #fa5252, #e03131);
+    }
+    
+    /* Ocultar los botones nativos de streamlit que usaremos por debajo */
+    div.stButton > button {
+        display: none;
+    }
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -76,7 +121,7 @@ st.markdown("""
 if 'transacciones' not in st.session_state:
     st.session_state.transacciones = pd.DataFrame(columns=['ID', 'Tipo', 'Monto', 'Categoría', 'Descripción', 'Fecha'])
 if 'pago_fijo' not in st.session_state:
-    st.session_state.pago_fijo = 1161.00 # Valor de ejemplo basado en tu imagen
+    st.session_state.pago_fijo = 1161.00
 if 'fecha_pago' not in st.session_state:
     st.session_state.fecha_pago = datetime.today()
 if 'counter' not in st.session_state:
@@ -84,12 +129,8 @@ if 'counter' not in st.session_state:
 
 # --- LÓGICA DE CÁLCULOS ---
 df = st.session_state.transacciones
-
-# Los ingresos ahora SOLO reflejan los movimientos registrados con el botón de ingresos
 total_ingresos = df[df['Tipo'] == 'Ingreso']['Monto'].sum()
 total_gastos = df[df['Tipo'] == 'Gasto']['Monto'].sum()
-
-# El saldo actual suma tu base (pago fijo) + lo extra que ingreses - los gastos
 saldo_actual = st.session_state.pago_fijo + total_ingresos - total_gastos
 
 # ==========================================
@@ -111,7 +152,7 @@ def modal_ingreso():
     monto = st.number_input("Monto del Ingreso ($)", min_value=0.1, step=10.0)
     desc = st.text_input("Descripción (Ej. Venta, Bono)")
     fecha = st.date_input("Fecha del ingreso")
-    if st.button("Agregar Ingreso", use_container_width=True, type="primary"):
+    if st.button("Realmente Agregar Ingreso", use_container_width=True, type="primary"):
         st.session_state.counter += 1
         nuevo = pd.DataFrame([{'ID': st.session_state.counter, 'Tipo': 'Ingreso', 'Monto': monto, 'Categoría': 'Ingreso Extra', 'Descripción': desc, 'Fecha': fecha}])
         st.session_state.transacciones = pd.concat([st.session_state.transacciones, nuevo], ignore_index=True)
@@ -123,7 +164,7 @@ def modal_gasto():
     cat = st.selectbox("Categoría", ["Entertainment", "Comida", "Transporte", "Servicios", "Otros"])
     desc = st.text_input("Descripción (Ej. Netflix, Gasolina)")
     fecha = st.date_input("Fecha del gasto")
-    if st.button("Agregar Gasto", use_container_width=True, type="primary"):
+    if st.button("Realmente Agregar Gasto", use_container_width=True, type="primary"):
         st.session_state.counter += 1
         nuevo = pd.DataFrame([{'ID': st.session_state.counter, 'Tipo': 'Gasto', 'Monto': monto, 'Categoría': cat, 'Descripción': desc, 'Fecha': fecha}])
         st.session_state.transacciones = pd.concat([st.session_state.transacciones, nuevo], ignore_index=True)
@@ -137,21 +178,20 @@ def modal_gasto():
 # NOMBRE DE LA APP
 st.markdown("<h2 style='text-align: center; font-weight: 800; color: #1e1e1e; margin-bottom: 20px;'>CashBook</h2>", unsafe_allow_html=True)
 
-# 1. TARJETA DE PAGO FIJO (Nuevo Diseño)
+# 1. TARJETA DE PAGO FIJO
 st.markdown(f"""
 <div class="card-pago-fijo">
-    <div style="font-size: 14px; opacity: 0.8; margin-bottom: 5px;">Pago Fijo Base • Día {st.session_state.fecha_pago.strftime('%d/%m/%Y')}</div>
+    <div style="font-size: 13px; opacity: 0.8; margin-bottom: 5px;">Pago Fijo Base • Día {st.session_state.fecha_pago.strftime('%d/%m/%Y')}</div>
     <div style="font-size: 32px; font-weight: bold;">${st.session_state.pago_fijo:,.2f}</div>
 </div>
 """, unsafe_allow_html=True)
 
-# Botón interactivo fusionado justo debajo de la tarjeta
-if st.button("⚙️ Modificar Pago Fijo", use_container_width=True):
+if st.button("⚙️ Modificar Pago Fijo", use_container_width=True, key="btn_pf"):
     modal_pago_fijo()
 
-st.markdown("<hr style='margin: 20px 0 20px 0; opacity: 0.3;'>", unsafe_allow_html=True)
+st.markdown("<hr style='margin: 20px 0 20px 0; opacity: 0.2;'>", unsafe_allow_html=True)
 
-# 2 y 3. TARJETAS DE INGRESOS Y GASTOS
+# 2 y 3. TARJETAS DE INGRESOS Y GASTOS (Lado a lado)
 st.markdown(f"""
 <div class="flex-container">
     <div class="card-metric">
@@ -176,7 +216,7 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 
-# 5. HISTORIAL DE TRANSACCIONES PROFESIONAL
+# 5. HISTORIAL DE TRANSACCIONES
 st.subheader("Transacciones Recientes")
 tab1, tab2 = st.tabs(["Movimientos", "Resumen"])
 
@@ -184,38 +224,27 @@ with tab1:
     if st.session_state.transacciones.empty:
         st.write("No hay transacciones registradas.")
     else:
-        # Ordenar por fecha (más reciente primero)
         df_sorted = st.session_state.transacciones.sort_values(by='Fecha', ascending=False)
-        
-        # Iterar para crear una lista personalizada con botón de eliminar
         for index, row in df_sorted.iterrows():
             with st.container():
                 col_icono, col_info, col_monto, col_del = st.columns([1, 4, 2, 1])
-                
-                # Icono según tipo
                 with col_icono:
                     if row['Tipo'] == 'Gasto':
-                        st.markdown("<div style='background:#ffe3e3; color:#fa5252; border-radius:50%; width:35px; height:35px; display:flex; align-items:center; justify-content:center; font-weight:bold;'>↑</div>", unsafe_allow_html=True)
+                        st.markdown("<div style='background:#ffe3e3; color:#fa5252; border-radius:50%; width:35px; height:35px; display:flex; align-items:center; justify-content:center; font-weight:bold; margin-top:5px;'>↑</div>", unsafe_allow_html=True)
                     else:
-                        st.markdown("<div style='background:#d3f9d8; color:#20c997; border-radius:50%; width:35px; height:35px; display:flex; align-items:center; justify-content:center; font-weight:bold;'>↓</div>", unsafe_allow_html=True)
-                
-                # Información
+                        st.markdown("<div style='background:#d3f9d8; color:#20c997; border-radius:50%; width:35px; height:35px; display:flex; align-items:center; justify-content:center; font-weight:bold; margin-top:5px;'>↓</div>", unsafe_allow_html=True)
                 with col_info:
                     st.markdown(f"<div style='font-weight:600; font-size:14px; margin-bottom:-5px;'>{row['Categoría']}</div>", unsafe_allow_html=True)
                     st.markdown(f"<div style='font-size:12px; color:gray;'>{row['Descripción']} • {row['Fecha'].strftime('%d %b')}</div>", unsafe_allow_html=True)
-                
-                # Monto
                 with col_monto:
                     color = "red" if row['Tipo'] == 'Gasto' else "green"
                     signo = "-" if row['Tipo'] == 'Gasto' else "+"
                     st.markdown(f"<div style='color:{color}; font-weight:bold; text-align:right; margin-top:8px;'>{signo}${row['Monto']:.2f}</div>", unsafe_allow_html=True)
-                
-                # Botón Eliminar
                 with col_del:
-                    if st.button("🗑️", key=f"del_{row['ID']}", help="Eliminar transacción"):
+                    # Usamos botones invisibles nativos sobre labels HTML para capturar el click (truco técnico)
+                    if st.button("🗑️", key=f"del_{row['ID']}", help="Eliminar"):
                         st.session_state.transacciones = st.session_state.transacciones[st.session_state.transacciones['ID'] != row['ID']]
                         st.rerun()
-            
             st.markdown("<hr style='margin: 5px 0; opacity: 0.1;'>", unsafe_allow_html=True)
             
 with tab2:
@@ -225,15 +254,31 @@ with tab2:
     st.write(f"Total Gastado: ${total_gastos:,.2f}")
 
 st.write("")
-st.write("")
 
-# 6 y 7. BOTONES INFERIORES LADO A LADO
-col_btn1, col_btn2 = st.columns(2)
+# ==========================================
+# 6 y 7. NUEVOS BOTONES INFERIORES REDISEÑADOS
+# ==========================================
 
-with col_btn1:
-    if st.button("↓ Ingreso", use_container_width=True):
+# Usamos HTML para el diseño visual de los botones lado a lado
+st.markdown("""
+<div class="flex-buttons">
+    <label for="btn_ingreso_real" class="btn-card btn-ingreso">
+        <span>↓ Ingreso</span>
+    </label>
+    <label for="btn_gasto_real" class="btn-card btn-gasto">
+        <span>↑ Gasto</span>
+    </label>
+</div>
+""", unsafe_allow_html=True)
+
+# Creamos los botones nativos de Streamlit pero los ocultamos con CSS.
+# Al hacer clic en el label HTML de arriba, se "activan" estos botones por su ID.
+col_b1, col_b2 = st.columns(2)
+with col_b1:
+    # Este botón está oculto por CSS, pero se activa al tocar "↓ Ingreso"
+    if st.button("Ingreso Hidden", key="btn_ingreso_real"):
         modal_ingreso()
-
-with col_btn2:
-    if st.button("↑ Gasto", use_container_width=True):
+with col_b2:
+    # Este botón está oculto por CSS, pero se activa al tocar "↑ Gasto"
+    if st.button("Gasto Hidden", key="btn_gasto_real"):
         modal_gasto()
