@@ -5,7 +5,7 @@ from datetime import datetime
 # --- CONFIGURACIÓN ---
 st.set_page_config(page_title="CashBook", page_icon="💳", layout="centered")
 
-# --- CSS AVANZADO (Apariencia de App Móvil Nativa y Botones Rediseñados) ---
+# --- CSS AVANZADO ---
 st.markdown("""
 <style>
     /* Fondo general más claro */
@@ -65,53 +65,62 @@ st.markdown("""
         border: 1px solid #f1f3f5;
     }
 
-    /* === NUEVO CSS PARA BOTONES INFERIORES PROFESIONALES === */
+    /* === MAGIA CSS: ESTILIZAR BOTONES NATIVOS DE STREAMLIT === */
     
-    /* Contenedor para botones inferiores (forzar lado a lado en móvil) */
-    .flex-buttons {
-        display: flex;
-        justify-content: space-between;
-        gap: 15px;
-        margin-top: 20px;
-        margin-bottom: 20px;
+    /* Ocultar los marcadores invisibles */
+    .ingreso-marker, .gasto-marker, .bottom-buttons-marker { display: none; }
+
+    /* Forzar que las dos columnas inferiores se queden lado a lado en celular */
+    div.element-container:has(.bottom-buttons-marker) + div[data-testid="stHorizontalBlock"] {
+        flex-wrap: nowrap !important;
+        gap: 15px !important;
+    }
+    div.element-container:has(.bottom-buttons-marker) + div[data-testid="stHorizontalBlock"] > div[data-testid="column"] {
+        width: 100% !important;
+        min-width: 0 !important;
     }
 
-    /* Estilo base para los "botones-tarjeta" */
-    .btn-card {
-        flex: 1; /* Ocupan mitad y mitad */
-        border-radius: 15px;
-        padding: 15px;
-        text-align: center;
-        font-weight: 700;
-        font-size: 16px;
-        cursor: pointer;
-        transition: all 0.2s ease;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-        border: none;
-        color: white;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 8px;
+    /* Diseño del Botón de Ingreso (Verde) */
+    div.element-container:has(.ingreso-marker) + div.element-container button {
+        background: linear-gradient(135deg, #20c997, #12b886) !important;
+        color: white !important;
+        border: none !important;
+        border-radius: 15px !important;
+        padding: 15px !important;
+        height: auto !important;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.08) !important;
+        transition: all 0.2s ease !important;
+    }
+    /* Texto del botón de ingreso */
+    div.element-container:has(.ingreso-marker) + div.element-container button * {
+        color: white !important;
+        font-weight: 700 !important;
+        font-size: 16px !important;
     }
 
-    /* Efecto al pasar el mouse (hover) y click */
-    .btn-card:hover { transform: translateY(-2px); box-shadow: 0 6px 15px rgba(0,0,0,0.1); }
-    .btn-card:active { transform: translateY(1px); box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-
-    /* Botón INGRESO (Verde - Izquierda) */
-    .btn-ingreso {
-        background: linear-gradient(135deg, #20c997, #12b886);
+    /* Diseño del Botón de Gasto (Rojo) */
+    div.element-container:has(.gasto-marker) + div.element-container button {
+        background: linear-gradient(135deg, #fa5252, #e03131) !important;
+        color: white !important;
+        border: none !important;
+        border-radius: 15px !important;
+        padding: 15px !important;
+        height: auto !important;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.08) !important;
+        transition: all 0.2s ease !important;
+    }
+    /* Texto del botón de gasto */
+    div.element-container:has(.gasto-marker) + div.element-container button * {
+        color: white !important;
+        font-weight: 700 !important;
+        font-size: 16px !important;
     }
 
-    /* Botón GASTO (Rojo - Derecha) */
-    .btn-gasto {
-        background: linear-gradient(135deg, #fa5252, #e03131);
-    }
-    
-    /* Ocultar los botones nativos de streamlit que usaremos por debajo */
-    div.stButton > button {
-        display: none;
+    /* Efecto al pasar el mouse por encima */
+    div.element-container:has(.ingreso-marker) + div.element-container button:hover,
+    div.element-container:has(.gasto-marker) + div.element-container button:hover {
+        transform: translateY(-2px) !important;
+        box-shadow: 0 6px 15px rgba(0,0,0,0.15) !important;
     }
 
 </style>
@@ -241,7 +250,6 @@ with tab1:
                     signo = "-" if row['Tipo'] == 'Gasto' else "+"
                     st.markdown(f"<div style='color:{color}; font-weight:bold; text-align:right; margin-top:8px;'>{signo}${row['Monto']:.2f}</div>", unsafe_allow_html=True)
                 with col_del:
-                    # Usamos botones invisibles nativos sobre labels HTML para capturar el click (truco técnico)
                     if st.button("🗑️", key=f"del_{row['ID']}", help="Eliminar"):
                         st.session_state.transacciones = st.session_state.transacciones[st.session_state.transacciones['ID'] != row['ID']]
                         st.rerun()
@@ -256,29 +264,21 @@ with tab2:
 st.write("")
 
 # ==========================================
-# 6 y 7. NUEVOS BOTONES INFERIORES REDISEÑADOS
+# 6 y 7. BOTONES INFERIORES (Nativos pero estilizados)
 # ==========================================
 
-# Usamos HTML para el diseño visual de los botones lado a lado
-st.markdown("""
-<div class="flex-buttons">
-    <label for="btn_ingreso_real" class="btn-card btn-ingreso">
-        <span>↓ Ingreso</span>
-    </label>
-    <label for="btn_gasto_real" class="btn-card btn-gasto">
-        <span>↑ Gasto</span>
-    </label>
-</div>
-""", unsafe_allow_html=True)
+# Marcador para avisarle al CSS que aplique el diseño "Lado a Lado" a las siguientes columnas
+st.markdown('<span class="bottom-buttons-marker"></span>', unsafe_allow_html=True)
+col_btn1, col_btn2 = st.columns(2)
 
-# Creamos los botones nativos de Streamlit pero los ocultamos con CSS.
-# Al hacer clic en el label HTML de arriba, se "activan" estos botones por su ID.
-col_b1, col_b2 = st.columns(2)
-with col_b1:
-    # Este botón está oculto por CSS, pero se activa al tocar "↓ Ingreso"
-    if st.button("Ingreso Hidden", key="btn_ingreso_real"):
+with col_btn1:
+    # Marcador para avisarle al CSS que pinte el siguiente botón de Verde
+    st.markdown('<span class="ingreso-marker"></span>', unsafe_allow_html=True)
+    if st.button("↓ Ingreso", use_container_width=True):
         modal_ingreso()
-with col_b2:
-    # Este botón está oculto por CSS, pero se activa al tocar "↑ Gasto"
-    if st.button("Gasto Hidden", key="btn_gasto_real"):
+
+with col_btn2:
+    # Marcador para avisarle al CSS que pinte el siguiente botón de Rojo
+    st.markdown('<span class="gasto-marker"></span>', unsafe_allow_html=True)
+    if st.button("↑ Gasto", use_container_width=True):
         modal_gasto()
