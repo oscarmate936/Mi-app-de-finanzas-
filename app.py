@@ -1,9 +1,36 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime
+import requests # <-- NUEVO: Para conectarnos a JSONBin
 
-# --- CONFIGURACIÓN ---
+# --- CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(page_title="CashBook", page_icon="💳", layout="centered")
+
+# --- CONFIGURACIÓN JSONBIN ---
+JSONBIN_KEY = "$2a$10$uGJHNDV9ckIhDrIMXIRzHOmemF1tr9LFHNstzIjMtjMUP7AxKbAJS"
+JSONBIN_BIN_ID = "69bd5fa2aa77b81da901cfe3"
+JSONBIN_URL = f"https://api.jsonbin.io/v3/b/{JSONBIN_BIN_ID}"
+JSONBIN_HEADERS = {
+    "Content-Type": "application/json",
+    "X-Master-Key": JSONBIN_KEY
+}
+
+def guardar_en_jsonbin():
+    """Guarda el estado actual en la nube silenciosamente."""
+    df_save = st.session_state.transacciones.copy()
+    if not df_save.empty:
+        df_save['Fecha'] = df_save['Fecha'].astype(str) # Convertimos fechas a texto para que JSON lo entienda
+        
+    data = {
+        "pago_fijo": float(st.session_state.pago_fijo),
+        "fecha_pago": str(st.session_state.fecha_pago),
+        "counter": int(st.session_state.counter),
+        "transacciones": df_save.to_dict(orient="records")
+    }
+    try:
+        requests.put(JSONBIN_URL, json=data, headers=JSONBIN_HEADERS)
+    except:
+        pass # Si hay error temporal de red, no rompemos la app
 
 # --- CSS AVANZADO ---
 st.markdown("""
@@ -126,15 +153,43 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- INICIALIZACIÓN DE DATOS (Estado de Sesión) ---
-if 'transacciones' not in st.session_state:
-    st.session_state.transacciones = pd.DataFrame(columns=['ID', 'Tipo', 'Monto', 'Categoría', 'Descripción', 'Fecha'])
-if 'pago_fijo' not in st.session_state:
-    st.session_state.pago_fijo = 1161.00
-if 'fecha_pago' not in st.session_state:
-    st.session_state.fecha_pago = datetime.today()
-if 'counter' not in st.session_state:
-    st.session_state.counter = 0
+# --- INICIALIZACIÓN DE DATOS (Estado de Sesión + JSONBin) ---
+if 'inicializado' not in st.session_state:
+    try:
+        # Intentamos descargar los datos desde la nube
+        req = requests.get(JSONBIN_URL, headers=JSONBIN_HEADERS)
+        if req.status_code == 200:
+            datos_nube = req.json()['record']
+            
+            st.session_state.pago_fijo = datos_nube.get('pago_fijo', 1161.00)
+            st.session_state.counter = datos_nube.get('counter', 0)
+            
+            # Formateamos la fecha correctamente
+            fecha_str = datos_nube.get('fecha_pago', str(datetime.today().date()))
+            try:
+                st.session_state.fecha_pago = datetime.strptime(fecha_str[:10], '%Y-%m-%d').date()
+            except:
+                st.session_state.fecha_pago = datetime.today().date()
+            
+            # Formateamos el DataFrame
+            df_nube = pd.DataFrame(datos_nube.get('transacciones', []))
+            if not df_nube.empty:
+                df_nube['Fecha'] = pd.to_datetime(df_nube['Fecha']).dt.date
+            else:
+                df_nube = pd.DataFrame(columns=['ID', 'Tipo', 'Monto', 'Categoría', 'Descripción', 'Fecha'])
+            
+            st.session_state.transacciones = df_nube
+        else:
+            raise Exception("No hay datos")
+            
+    except:
+        # Si algo falla (primer uso), iniciamos en blanco
+        st.session_state.transacciones = pd.DataFrame(columns=['ID', 'Tipo', 'Monto', 'Categoría', 'Descripción', 'Fecha'])
+        st.session_state.pago_fijo = 1161.00
+        st.session_state.fecha_pago = datetime.today().date()
+        st.session_state.counter = 0
+
+    st.session_state.inicializado = True
 
 # --- LÓGICA DE CÁLCULOS ---
 df = st.session_state.transacciones
@@ -154,6 +209,7 @@ def modal_pago_fijo():
     if st.button("Guardar Cambios", use_container_width=True, type="primary"):
         st.session_state.pago_fijo = nuevo_pago
         st.session_state.fecha_pago = nueva_fecha
+        guardar_en_jsonbin() # <-- Guardamos en la nube
         st.rerun()
 
 @st.dialog("↓ Registrar Nuevo Ingreso")
@@ -165,13 +221,13 @@ def modal_ingreso():
         st.session_state.counter += 1
         nuevo = pd.DataFrame([{'ID': st.session_state.counter, 'Tipo': 'Ingreso', 'Monto': monto, 'Categoría': 'Ingreso Extra', 'Descripción': desc, 'Fecha': fecha}])
         st.session_state.transacciones = pd.concat([st.session_state.transacciones, nuevo], ignore_index=True)
+        guardar_en_jsonbin() # <-- Guardamos en la nube
         st.rerun()
 
 @st.dialog("↑ Registrar Nuevo Gasto")
 def modal_gasto():
     monto = st.number_input("Monto del Gasto ($)", min_value=0.1, step=5.0)
     
-    # --- CATEGORÍAS REDISEÑADAS Y EN ESPAÑOL ---
     cat = st.selectbox("Categoría", [
         "Alimentación", 
         "Transporte", 
@@ -189,6 +245,7 @@ def modal_gasto():
         st.session_state.counter += 1
         nuevo = pd.DataFrame([{'ID': st.session_state.counter, 'Tipo': 'Gasto', 'Monto': monto, 'Categoría': cat, 'Descripción': desc, 'Fecha': fecha}])
         st.session_state.transacciones = pd.concat([st.session_state.transacciones, nuevo], ignore_index=True)
+        guardar_en_jsonbin() # <-- Guardamos en la nube
         st.rerun()
 
 
@@ -310,6 +367,7 @@ with tab1:
                 with col_del:
                     if st.button("🗑️", key=f"del_{row['ID']}", help="Eliminar registro"):
                         st.session_state.transacciones = st.session_state.transacciones[st.session_state.transacciones['ID'] != row['ID']]
+                        guardar_en_jsonbin() # <-- Guardamos en la nube la eliminación
                         st.rerun()
 
 with tab2:
