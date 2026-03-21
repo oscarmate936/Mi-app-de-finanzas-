@@ -3,7 +3,7 @@ import pandas as pd
 from datetime import datetime
 
 # --- CONFIGURACIÓN ---
-st.set_page_config(page_title="Mi Billetera", page_icon="💳", layout="centered")
+st.set_page_config(page_title="CashBook", page_icon="💳", layout="centered")
 
 # --- CSS AVANZADO (Apariencia de App Móvil Nativa) ---
 st.markdown("""
@@ -17,6 +17,17 @@ st.markdown("""
         justify-content: space-between;
         gap: 15px;
         margin-bottom: 15px;
+    }
+    
+    /* Nueva Tarjeta Pago Fijo (Gris oscuro profesional) */
+    .card-pago-fijo {
+        background: linear-gradient(135deg, #343a40, #212529);
+        color: white;
+        border-radius: 20px;
+        padding: 20px;
+        box-shadow: 0 8px 20px rgba(33, 37, 41, 0.25);
+        margin-bottom: 10px;
+        text-align: center;
     }
     
     /* Estilos de Tarjetas Métricas */
@@ -71,7 +82,7 @@ if 'fecha_pago' not in st.session_state:
 if 'counter' not in st.session_state:
     st.session_state.counter = 0
 
-# --- LÓGICA DE CÁLCULOS (ACTUALIZADA) ---
+# --- LÓGICA DE CÁLCULOS ---
 df = st.session_state.transacciones
 
 # Los ingresos ahora SOLO reflejan los movimientos registrados con el botón de ingresos
@@ -123,23 +134,30 @@ def modal_gasto():
 # INTERFAZ VISUAL (DISEÑO PRINCIPAL)
 # ==========================================
 
-# 1. BOTÓN DE PAGO FIJO (Interactivo)
-col_top1, col_top2 = st.columns([3, 1])
-with col_top1:
-    st.markdown(f"**Pago Fijo:** ${st.session_state.pago_fijo:,.2f} | **Día:** {st.session_state.fecha_pago.strftime('%d/%m/%Y')}")
-with col_top2:
-    if st.button("⚙️ Editar", use_container_width=True):
-        modal_pago_fijo()
+# NOMBRE DE LA APP
+st.markdown("<h2 style='text-align: center; font-weight: 800; color: #1e1e1e; margin-bottom: 20px;'>CashBook</h2>", unsafe_allow_html=True)
 
-st.markdown("<hr style='margin: 10px 0 20px 0; opacity: 0.3;'>", unsafe_allow_html=True)
+# 1. TARJETA DE PAGO FIJO (Nuevo Diseño)
+st.markdown(f"""
+<div class="card-pago-fijo">
+    <div style="font-size: 14px; opacity: 0.8; margin-bottom: 5px;">Pago Fijo Base • Día {st.session_state.fecha_pago.strftime('%d/%m/%Y')}</div>
+    <div style="font-size: 32px; font-weight: bold;">${st.session_state.pago_fijo:,.2f}</div>
+</div>
+""", unsafe_allow_html=True)
 
-# 2 y 3. TARJETAS DE INGRESOS Y GASTOS (Lado a lado usando Flexbox)
+# Botón interactivo fusionado justo debajo de la tarjeta
+if st.button("⚙️ Modificar Pago Fijo", use_container_width=True):
+    modal_pago_fijo()
+
+st.markdown("<hr style='margin: 20px 0 20px 0; opacity: 0.3;'>", unsafe_allow_html=True)
+
+# 2 y 3. TARJETAS DE INGRESOS Y GASTOS
 st.markdown(f"""
 <div class="flex-container">
     <div class="card-metric">
-        <div class="metric-title"><span style="color:#20c997;">↓</span> Ingresos</div>
+        <div class="metric-title"><span style="color:#20c997;">↓</span> Ingresos Extra</div>
         <div class="metric-value text-green">${total_ingresos:,.2f}</div>
-        <div class="metric-subtitle">Este Mes</div>
+        <div class="metric-subtitle">Registrados</div>
     </div>
     <div class="card-metric">
         <div class="metric-title"><span style="color:#fa5252;">↑</span> Gastos</div>
