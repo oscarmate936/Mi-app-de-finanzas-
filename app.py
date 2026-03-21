@@ -5,17 +5,17 @@ from datetime import datetime
 # --- CONFIGURACIÓN ---
 st.set_page_config(page_title="CashBook", page_icon="💳", layout="centered")
 
-# --- CSS AVANZADO (Simetría Total y Alineación Milimétrica) ---
+# --- CSS AVANZADO ---
 st.markdown("""
 <style>
     /* Fondo general más claro */
     .stApp { background-color: #f8f9fa; }
     
-    /* Contenedor Flex para las Tarjetas Superiores */
+    /* Contenedor Flex para forzar lado a lado en móviles (Tarjetas superiores) */
     .flex-container {
         display: flex;
         justify-content: space-between;
-        gap: 15px; /* ESPACIO IDÉNTICO PARA TARJETAS Y BOTONES */
+        gap: 15px;
         margin-bottom: 15px;
     }
     
@@ -32,13 +32,12 @@ st.markdown("""
     
     /* Estilos de Tarjetas Métricas Blancas */
     .card-metric {
-        flex: 1; /* Ocupan mitad exacta */
+        flex: 1;
         background-color: #ffffff;
         border-radius: 20px;
         padding: 20px 15px;
         box-shadow: 0 4px 12px rgba(0,0,0,0.03);
         border: 1px solid #f1f3f5;
-        text-align: center; /* Centrar contenido interno */
     }
     .metric-title { font-size: 14px; font-weight: 600; color: #868e96; margin-bottom: 8px;}
     .metric-value { font-size: 24px; font-weight: 700; }
@@ -54,7 +53,6 @@ st.markdown("""
         padding: 25px 20px;
         box-shadow: 0 8px 20px rgba(0,123,255,0.2);
         margin-bottom: 30px;
-        text-align: center;
     }
     
     /* Historial de transacciones */
@@ -67,66 +65,68 @@ st.markdown("""
         border: 1px solid #f1f3f5;
     }
 
-    /* === NUEVA ESTRUCTURA CSS PARA ALINEACIÓN DE BOTONES === */
-
-    /* Contenedor Robusto para botones (Imita .flex-container) */
-    .robust-flex-buttons {
-        display: flex !important;
-        justify-content: space-between !important;
-        gap: 15px !important; /* MISMO GAP QUE LAS TARJETAS */
-        margin-top: 20px;
-        margin-bottom: 20px;
-    }
+    /* === MAGIA CSS: ESTILIZAR BOTONES NATIVOS DE STREAMLIT === */
     
-    /* Asegurar que las columnas dentro del contenedor flex no se apilen */
-    .robust-flex-buttons > div[data-testid="column"] {
-        flex: 1 !important; /* Mitad exacta cada una */
-        min-width: 0 !important; /* Evitar que streamlit las apile en móvil */
+    /* Ocultar los marcadores invisibles */
+    .ingreso-marker, .gasto-marker, .bottom-buttons-marker { display: none; }
+
+    /* Forzar que las dos columnas inferiores se queden lado a lado en celular */
+    div.element-container:has(.bottom-buttons-marker) + div[data-testid="stHorizontalBlock"] {
+        flex-wrap: nowrap !important;
+        gap: 15px !important;
+    }
+    div.element-container:has(.bottom-buttons-marker) + div[data-testid="stHorizontalBlock"] > div[data-testid="column"] {
         width: 100% !important;
+        min-width: 0 !important;
     }
 
-    /* Estilo para los botones nativos dentro del contenedor robusto */
-    .robust-flex-buttons .stButton > button {
-        width: 100% !important; /* Ocupa todo el ancho de su columna centrada */
+    /* Diseño del Botón de Ingreso (Verde) */
+    div.element-container:has(.ingreso-marker) + div.element-container button {
+        background: linear-gradient(135deg, #20c997, #12b886) !important;
+        color: white !important;
+        border: none !important;
         border-radius: 15px !important;
-        font-weight: 700 !important;
-        font-size: 16px !important;
         padding: 15px !important;
         height: auto !important;
-        display: flex !important;
-        justify-content: center !important; /* Centra texto interior */
-        align-items: center !important;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.08) !important;
+        transition: all 0.2s ease !important;
+    }
+    /* Texto del botón de ingreso */
+    div.element-container:has(.ingreso-marker) + div.element-container button * {
+        color: white !important;
+        font-weight: 700 !important;
+        font-size: 16px !important;
     }
 
-    /* Ocultar marcadores técnicos */
-    .bottom-block-marker { display: none; }
-
-    /* Forzar colores específicos (Verde y Rojo) sobrescribiendo el primario */
-    
-    /* Botón INGRESO (Izquierda) */
-    div[data-testid="column"]:first-child .stButton > button {
-        background-color: #20c997 !important;
+    /* Diseño del Botón de Gasto (Rojo) */
+    div.element-container:has(.gasto-marker) + div.element-container button {
+        background: linear-gradient(135deg, #fa5252, #e03131) !important;
         color: white !important;
         border: none !important;
+        border-radius: 15px !important;
+        padding: 15px !important;
+        height: auto !important;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.08) !important;
+        transition: all 0.2s ease !important;
     }
-    /* Botón GASTO (Derecha) */
-    div[data-testid="column"]:last-child .stButton > button {
-        background-color: #fa5252 !important;
+    /* Texto del botón de gasto */
+    div.element-container:has(.gasto-marker) + div.element-container button * {
         color: white !important;
-        border: none !important;
+        font-weight: 700 !important;
+        font-size: 16px !important;
     }
 
-    /* Efectos hover */
-    .robust-flex-buttons .stButton > button:hover {
+    /* Efecto al pasar el mouse por encima */
+    div.element-container:has(.ingreso-marker) + div.element-container button:hover,
+    div.element-container:has(.gasto-marker) + div.element-container button:hover {
         transform: translateY(-2px) !important;
-        box-shadow: 0 5px 10px rgba(0,0,0,0.1) !important;
-        opacity: 0.9;
+        box-shadow: 0 6px 15px rgba(0,0,0,0.15) !important;
     }
 
 </style>
 """, unsafe_allow_html=True)
 
-# --- INICIALIZACIÓN DE DATOS ---
+# --- INICIALIZACIÓN DE DATOS (Estado de Sesión) ---
 if 'transacciones' not in st.session_state:
     st.session_state.transacciones = pd.DataFrame(columns=['ID', 'Tipo', 'Monto', 'Categoría', 'Descripción', 'Fecha'])
 if 'pago_fijo' not in st.session_state:
@@ -200,7 +200,7 @@ if st.button("⚙️ Modificar Pago Fijo", use_container_width=True, key="btn_pf
 
 st.markdown("<hr style='margin: 20px 0 20px 0; opacity: 0.2;'>", unsafe_allow_html=True)
 
-# 2 y 3. TARJETAS DE INGRESOS Y GASTOS (Lado a lado - Estructura Maestra)
+# 2 y 3. TARJETAS DE INGRESOS Y GASTOS (Lado a lado)
 st.markdown(f"""
 <div class="flex-container">
     <div class="card-metric">
@@ -261,27 +261,24 @@ with tab2:
     st.write(f"Total Ingresos Extra: ${total_ingresos:,.2f}")
     st.write(f"Total Gastado: ${total_gastos:,.2f}")
 
-st.write("") # Espaciador spacer
+st.write("")
 
-# =========================================================
-# 6 y 7. BOTONES INFERIORES CON ALINEACIÓN MILIMÉTRICA
-# =========================================================
+# ==========================================
+# 6 y 7. BOTONES INFERIORES (Nativos pero estilizados)
+# ==========================================
 
-# CREAMOS UN CONTENEDOR HTML QUE FUERZA EL DISEÑO FLEXBOX IDÉNTICO AL SUPERIOR
-st.markdown('<div class="robust-flex-buttons">', unsafe_allow_html=True)
+# Marcador para avisarle al CSS que aplique el diseño "Lado a Lado" a las siguientes columnas
+st.markdown('<span class="bottom-buttons-marker"></span>', unsafe_allow_html=True)
+col_btn1, col_btn2 = st.columns(2)
 
-# Usamos columnas nativas dentro del contenedor flex robusto
-col_btn_l, col_btn_r = st.columns(2)
-
-with col_btn_l:
-    # Botón de Ingreso (Se alinea matemáticamente con la tarjeta de Ingreso Extra)
-    if st.button("↓ Ingreso", key="final_btn_ing", use_container_width=True):
+with col_btn1:
+    # Marcador para avisarle al CSS que pinte el siguiente botón de Verde
+    st.markdown('<span class="ingreso-marker"></span>', unsafe_allow_html=True)
+    if st.button("↓ Ingreso", use_container_width=True):
         modal_ingreso()
 
-with col_btn_r:
-    # Botón de Gasto (Se alinea matemáticamente con la tarjeta de Gasto)
-    if st.button("↑ Gasto", key="final_btn_gas", use_container_width=True):
+with col_btn2:
+    # Marcador para avisarle al CSS que pinte el siguiente botón de Rojo
+    st.markdown('<span class="gasto-marker"></span>', unsafe_allow_html=True)
+    if st.button("↑ Gasto", use_container_width=True):
         modal_gasto()
-
-# Cerramos el contenedor HTML robusto
-st.markdown('</div>', unsafe_allow_html=True)
