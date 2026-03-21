@@ -38,6 +38,9 @@ st.markdown("""
         padding: 20px 15px;
         box-shadow: 0 4px 12px rgba(0,0,0,0.03);
         border: 1px solid #f1f3f5;
+        display: flex;
+        flex-direction: column;
+        align-items: center; /* Centrar contenido de las tarjetas */
     }
     .metric-title { font-size: 14px; font-weight: 600; color: #868e96; margin-bottom: 8px;}
     .metric-value { font-size: 24px; font-weight: 700; }
@@ -53,6 +56,7 @@ st.markdown("""
         padding: 25px 20px;
         box-shadow: 0 8px 20px rgba(0,123,255,0.2);
         margin-bottom: 30px;
+        text-align: center;
     }
     
     /* Historial de transacciones */
@@ -65,18 +69,19 @@ st.markdown("""
         border: 1px solid #f1f3f5;
     }
 
-    /* === MAGIA CSS: ESTILIZAR BOTONES NATIVOS DE STREAMLIT === */
+    /* === MAGIA CSS: ALINEACIÓN PERFECTA DE BOTONES NATIVOS === */
     
     /* Ocultar los marcadores invisibles */
     .ingreso-marker, .gasto-marker, .bottom-buttons-marker { display: none; }
 
-    /* Forzar que las dos columnas inferiores se queden lado a lado en celular */
+    /* Forzar que las dos columnas inferiores sean idénticas al .flex-container de arriba */
     div.element-container:has(.bottom-buttons-marker) + div[data-testid="stHorizontalBlock"] {
+        display: flex !important;
         flex-wrap: nowrap !important;
-        gap: 15px !important;
+        gap: 15px !important; /* Misma separación que las tarjetas */
     }
     div.element-container:has(.bottom-buttons-marker) + div[data-testid="stHorizontalBlock"] > div[data-testid="column"] {
-        width: 100% !important;
+        flex: 1 !important; /* Fuerza a que ocupen exactamente la mitad cada uno */
         min-width: 0 !important;
     }
 
@@ -85,9 +90,13 @@ st.markdown("""
         background: linear-gradient(135deg, #20c997, #12b886) !important;
         color: white !important;
         border: none !important;
-        border-radius: 15px !important;
+        border-radius: 20px !important; /* Mismo radio que las tarjetas */
         padding: 15px !important;
         height: auto !important;
+        width: 100% !important; /* Ocupa todo el espacio de su columna centrándolo con la tarjeta */
+        display: flex !important;
+        justify-content: center !important; /* Centra el texto */
+        align-items: center !important;
         box-shadow: 0 4px 10px rgba(0,0,0,0.08) !important;
         transition: all 0.2s ease !important;
     }
@@ -103,9 +112,13 @@ st.markdown("""
         background: linear-gradient(135deg, #fa5252, #e03131) !important;
         color: white !important;
         border: none !important;
-        border-radius: 15px !important;
+        border-radius: 20px !important; /* Mismo radio que las tarjetas */
         padding: 15px !important;
         height: auto !important;
+        width: 100% !important; /* Ocupa todo el espacio de su columna centrándolo con la tarjeta */
+        display: flex !important;
+        justify-content: center !important; /* Centra el texto */
+        align-items: center !important;
         box-shadow: 0 4px 10px rgba(0,0,0,0.08) !important;
         transition: all 0.2s ease !important;
     }
@@ -264,21 +277,21 @@ with tab2:
 st.write("")
 
 # ==========================================
-# 6 y 7. BOTONES INFERIORES (Nativos pero estilizados)
+# 6 y 7. BOTONES INFERIORES (Nativos y perfectamente alineados)
 # ==========================================
 
-# Marcador para avisarle al CSS que aplique el diseño "Lado a Lado" a las siguientes columnas
+# Marcador para avisarle al CSS que aplique el diseño "Lado a Lado Exacto" a las siguientes columnas
 st.markdown('<span class="bottom-buttons-marker"></span>', unsafe_allow_html=True)
 col_btn1, col_btn2 = st.columns(2)
 
 with col_btn1:
-    # Marcador para avisarle al CSS que pinte el siguiente botón de Verde
+    # Marcador para pintar verde y forzar ancho/centrado
     st.markdown('<span class="ingreso-marker"></span>', unsafe_allow_html=True)
-    if st.button("↓ Ingreso", use_container_width=True):
+    if st.button("↓ Ingreso"):
         modal_ingreso()
 
 with col_btn2:
-    # Marcador para avisarle al CSS que pinte el siguiente botón de Rojo
+    # Marcador para pintar rojo y forzar ancho/centrado
     st.markdown('<span class="gasto-marker"></span>', unsafe_allow_html=True)
-    if st.button("↑ Gasto", use_container_width=True):
+    if st.button("↑ Gasto"):
         modal_gasto()
