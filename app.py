@@ -71,13 +71,15 @@ if 'fecha_pago' not in st.session_state:
 if 'counter' not in st.session_state:
     st.session_state.counter = 0
 
-# --- LÓGICA DE CÁLCULOS ---
+# --- LÓGICA DE CÁLCULOS (ACTUALIZADA) ---
 df = st.session_state.transacciones
-# Los ingresos incluyen el pago fijo + ingresos adicionales registrados
-ingresos_adicionales = df[df['Tipo'] == 'Ingreso']['Monto'].sum()
-total_ingresos = st.session_state.pago_fijo + ingresos_adicionales
+
+# Los ingresos ahora SOLO reflejan los movimientos registrados con el botón de ingresos
+total_ingresos = df[df['Tipo'] == 'Ingreso']['Monto'].sum()
 total_gastos = df[df['Tipo'] == 'Gasto']['Monto'].sum()
-saldo_actual = total_ingresos - total_gastos
+
+# El saldo actual suma tu base (pago fijo) + lo extra que ingreses - los gastos
+saldo_actual = st.session_state.pago_fijo + total_ingresos - total_gastos
 
 # ==========================================
 # VENTANAS MODALES INTERACTIVAS (Pop-ups)
@@ -193,7 +195,6 @@ with tab1:
                 # Botón Eliminar
                 with col_del:
                     if st.button("🗑️", key=f"del_{row['ID']}", help="Eliminar transacción"):
-                        # Filtrar el dataframe para quitar este ID
                         st.session_state.transacciones = st.session_state.transacciones[st.session_state.transacciones['ID'] != row['ID']]
                         st.rerun()
             
@@ -201,8 +202,9 @@ with tab1:
             
 with tab2:
     st.info(f"💰 **Total Dinero Restante:** ${saldo_actual:,.2f}")
+    st.write(f"Pago Fijo Base: ${st.session_state.pago_fijo:,.2f}")
+    st.write(f"Total Ingresos Extra: ${total_ingresos:,.2f}")
     st.write(f"Total Gastado: ${total_gastos:,.2f}")
-    st.write(f"Total Ingresado (Extra): ${ingresos_adicionales:,.2f}")
 
 st.write("")
 st.write("")
