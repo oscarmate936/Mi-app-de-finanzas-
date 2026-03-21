@@ -226,9 +226,32 @@ st.markdown(f"""
 
 
 # ==========================================
-# 5. HISTORIAL DE TRANSACCIONES Y GRÁFICOS (MODIFICADO)
+# 5. BOTONES DE ACCIÓN (Ahora arriba de las pestañas)
 # ==========================================
-st.write("") # Espaciador
+
+# Marcador para avisarle al CSS que aplique el diseño "Lado a Lado" a las siguientes columnas
+st.markdown('<span class="bottom-buttons-marker"></span>', unsafe_allow_html=True)
+col_btn1, col_btn2 = st.columns(2)
+
+with col_btn1:
+    # Marcador para avisarle al CSS que pinte el siguiente botón de Verde
+    st.markdown('<span class="ingreso-marker"></span>', unsafe_allow_html=True)
+    if st.button("↓ Ingreso", use_container_width=True):
+        modal_ingreso()
+
+with col_btn2:
+    # Marcador para avisarle al CSS que pinte el siguiente botón de Rojo
+    st.markdown('<span class="gasto-marker"></span>', unsafe_allow_html=True)
+    if st.button("↑ Gasto", use_container_width=True):
+        modal_gasto()
+
+st.markdown("<hr style='margin: 30px 0 20px 0; opacity: 0.2;'>", unsafe_allow_html=True)
+
+
+# ==========================================
+# 6. HISTORIAL DE TRANSACCIONES Y GRÁFICOS (Ahora abajo)
+# ==========================================
+
 tab1, tab2, tab3 = st.tabs(["📝 Historial", "📊 Gráficos", "📋 Resumen"])
 
 with tab1:
@@ -237,7 +260,6 @@ with tab1:
     else:
         df_sorted = st.session_state.transacciones.sort_values(by='Fecha', ascending=False)
         for index, row in df_sorted.iterrows():
-            # Utilizamos st.container con borde para crear la ilusión de una tarjeta nativa e impecable
             with st.container(border=True):
                 col_icono, col_info, col_monto, col_del = st.columns([1, 4, 3, 1])
                 
@@ -277,30 +299,8 @@ with tab2:
         st.success("¡Excelente! Aún no tienes gastos registrados para graficar.")
 
 with tab3:
-    # Conservé tu resumen original en una tercera pestaña para que no perdieras la funcionalidad
     st.info(f"💰 **Total Dinero Restante:** ${saldo_actual:,.2f}")
     st.write(f"Pago Fijo Base: **${st.session_state.pago_fijo:,.2f}**")
     st.write(f"Total Ingresos Extra: **${total_ingresos:,.2f}**")
     st.write(f"Total Gastado: **${total_gastos:,.2f}**")
 
-st.write("")
-
-# ==========================================
-# 6 y 7. BOTONES INFERIORES (Nativos pero estilizados)
-# ==========================================
-
-# Marcador para avisarle al CSS que aplique el diseño "Lado a Lado" a las siguientes columnas
-st.markdown('<span class="bottom-buttons-marker"></span>', unsafe_allow_html=True)
-col_btn1, col_btn2 = st.columns(2)
-
-with col_btn1:
-    # Marcador para avisarle al CSS que pinte el siguiente botón de Verde
-    st.markdown('<span class="ingreso-marker"></span>', unsafe_allow_html=True)
-    if st.button("↓ Ingreso", use_container_width=True):
-        modal_ingreso()
-
-with col_btn2:
-    # Marcador para avisarle al CSS que pinte el siguiente botón de Rojo
-    st.markdown('<span class="gasto-marker"></span>', unsafe_allow_html=True)
-    if st.button("↑ Gasto", use_container_width=True):
-        modal_gasto()
