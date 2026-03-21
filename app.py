@@ -7,8 +7,10 @@ import requests # <-- NUEVO: Para conectarnos a JSONBin
 st.set_page_config(page_title="CashBook", page_icon="💳", layout="centered")
 
 # --- CONFIGURACIÓN JSONBIN ---
-JSONBIN_KEY = "$2a$10$uGJHNDV9ckIhDrIMXIRzHOmemF1tr9LFHNstzIjMtjMUP7AxKbAJS"
-JSONBIN_BIN_ID = "69bd5fa2aa77b81da901cfe3"
+# Leemos las claves de forma segura desde los secrets de Streamlit
+JSONBIN_KEY = st.secrets["JSONBIN_KEY"]
+JSONBIN_BIN_ID = st.secrets["JSONBIN_BIN_ID"]
+
 JSONBIN_URL = f"https://api.jsonbin.io/v3/b/{JSONBIN_BIN_ID}"
 JSONBIN_HEADERS = {
     "Content-Type": "application/json",
@@ -20,7 +22,7 @@ def guardar_en_jsonbin():
     df_save = st.session_state.transacciones.copy()
     if not df_save.empty:
         df_save['Fecha'] = df_save['Fecha'].astype(str) # Convertimos fechas a texto para que JSON lo entienda
-        
+
     data = {
         "pago_fijo": float(st.session_state.pago_fijo),
         "fecha_pago": str(st.session_state.fecha_pago),
@@ -160,28 +162,28 @@ if 'inicializado' not in st.session_state:
         req = requests.get(JSONBIN_URL, headers=JSONBIN_HEADERS)
         if req.status_code == 200:
             datos_nube = req.json()['record']
-            
+
             st.session_state.pago_fijo = datos_nube.get('pago_fijo', 1161.00)
             st.session_state.counter = datos_nube.get('counter', 0)
-            
+
             # Formateamos la fecha correctamente
             fecha_str = datos_nube.get('fecha_pago', str(datetime.today().date()))
             try:
                 st.session_state.fecha_pago = datetime.strptime(fecha_str[:10], '%Y-%m-%d').date()
             except:
                 st.session_state.fecha_pago = datetime.today().date()
-            
+
             # Formateamos el DataFrame
             df_nube = pd.DataFrame(datos_nube.get('transacciones', []))
             if not df_nube.empty:
                 df_nube['Fecha'] = pd.to_datetime(df_nube['Fecha']).dt.date
             else:
                 df_nube = pd.DataFrame(columns=['ID', 'Tipo', 'Monto', 'Categoría', 'Descripción', 'Fecha'])
-            
+
             st.session_state.transacciones = df_nube
         else:
             raise Exception("No hay datos")
-            
+
     except:
         # Si algo falla (primer uso), iniciamos en blanco
         st.session_state.transacciones = pd.DataFrame(columns=['ID', 'Tipo', 'Monto', 'Categoría', 'Descripción', 'Fecha'])
@@ -227,7 +229,7 @@ def modal_ingreso():
 @st.dialog("↑ Registrar Nuevo Gasto")
 def modal_gasto():
     monto = st.number_input("Monto del Gasto ($)", min_value=0.1, step=5.0)
-    
+
     cat = st.selectbox("Categoría", [
         "Alimentación", 
         "Transporte", 
@@ -238,7 +240,7 @@ def modal_gasto():
         "Educación", 
         "Otros"
     ])
-    
+
     desc = st.text_input("Descripción (Ej. Netflix, Gasolina)")
     fecha = st.date_input("Fecha del gasto")
     if st.button("Realmente Agregar Gasto", use_container_width=True, type="primary"):
@@ -328,7 +330,7 @@ with tab1:
         st.info("No hay transacciones registradas todavía.")
     else:
         df_sorted = st.session_state.transacciones.sort_values(by='Fecha', ascending=False)
-        
+
         # --- MAPEO PROFESIONAL DE ÍCONOS POR CATEGORÍA ---
         iconos_cat = {
             "Alimentación": "🍽️",
@@ -345,25 +347,25 @@ with tab1:
         for index, row in df_sorted.iterrows():
             with st.container(border=True):
                 col_icono, col_info, col_monto, col_del = st.columns([1, 4, 3, 1], vertical_alignment="center")
-                
+
                 icono = iconos_cat.get(row['Categoría'], "💳")
-                
+
                 with col_icono:
                     st.markdown(f"""
                     <div style='background-color: #f8f9fa; border: 1px solid #e9ecef; border-radius: 50%; width: 46px; height: 46px; display: flex; align-items: center; justify-content: center; font-size: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.04);'>
                         {icono}
                     </div>
                     """, unsafe_allow_html=True)
-                
+
                 with col_info:
                     st.markdown(f"<div style='font-family: system-ui, sans-serif; font-weight: 700; font-size: 15px; color: #212529; margin-bottom: 2px;'>{row['Categoría']}</div>", unsafe_allow_html=True)
                     st.markdown(f"<div style='font-family: system-ui, sans-serif; font-size: 13px; color: #868e96;'>{row['Descripción']} • {row['Fecha'].strftime('%d %b %Y')}</div>", unsafe_allow_html=True)
-                
+
                 with col_monto:
                     color = "#fa5252" if row['Tipo'] == 'Gasto' else "#20c997"
                     signo = "-" if row['Tipo'] == 'Gasto' else "+"
                     st.markdown(f"<div style='font-family: monospace, sans-serif; color: {color}; font-weight: 800; font-size: 17px; text-align: right; letter-spacing: -0.5px;'>{signo}${row['Monto']:,.2f}</div>", unsafe_allow_html=True)
-                
+
                 with col_del:
                     if st.button("🗑️", key=f"del_{row['ID']}", help="Eliminar registro"):
                         st.session_state.transacciones = st.session_state.transacciones[st.session_state.transacciones['ID'] != row['ID']]
@@ -373,12 +375,12 @@ with tab1:
 with tab2:
     st.markdown("<h4 style='color: #343a40; margin-bottom: 20px;'>Tus Gastos por Día</h4>", unsafe_allow_html=True)
     df_gastos = st.session_state.transacciones[st.session_state.transacciones['Tipo'] == 'Gasto']
-    
+
     if not df_gastos.empty:
         # Agrupamos los montos de gasto por fecha
         gastos_diarios = df_gastos.groupby('Fecha')['Monto'].sum().reset_index()
         gastos_diarios.set_index('Fecha', inplace=True)
-        
+
         # Mostramos el gráfico de barras nativo
         st.bar_chart(gastos_diarios, color="#fa5252", use_container_width=True)
     else:
@@ -388,4 +390,4 @@ with tab3:
     st.info(f"💰 **Total Dinero Restante:** ${saldo_actual:,.2f}")
     st.write(f"Pago Fijo Base: **${st.session_state.pago_fijo:,.2f}**")
     st.write(f"Total Ingresos Extra: **${total_ingresos:,.2f}**")
-    st.write(f"Total Gastado: **${total_gastos:,.2f}**")
+    st.write(f"Total Gastado: **${total_gastos:,.2f}**") 
